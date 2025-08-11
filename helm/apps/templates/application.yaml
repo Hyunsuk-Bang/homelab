@@ -16,7 +16,7 @@ spec:
     chart: {{ $app.chart }}
     {{- end }}
     helm:
-      releaseName: {{ $name }}
+      releaseName: {{ $app.name }}
       {{- if $app.values }}
       values: |
 {{ toYaml $app.values | indent 8 }}
