@@ -76,7 +76,7 @@ apps:
   secretAddons:
     enabled: true
     type: helm
-    repoURL: https://gtihub.com/Hyunsuk-Bang
+    repoURL: https://github.com/Hyunsuk-Bang
     name: secret-addons
     path: secret-addons
     targetRevision: 0.1.*
