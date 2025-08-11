@@ -31,6 +31,19 @@ apps:
           enabled: true
           ingressClassName: cloudflare-tunnel
 
+  certManager:
+    enabled: true
+    repoURL:: https://charts.jetstack.io
+    chart: cert-manager
+    name: cert-manager
+    namespace: hbang-resources
+    values:
+      replicaCount: 2
+      webhook:
+        replicaCount: 2
+      cainjector:
+        replicaCount: 2
+
   cloudflareTunnelIngressController:
     enabled: true
     repoURL: https://helm.strrl.dev
