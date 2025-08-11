@@ -76,7 +76,7 @@ apps:
   secretAddons:
     enabled: true
     type: helm
-    repoURL: https://github.com/Hyunsuk-Bang
+    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
     name: secret-addons
     path: helm/secret-addons
     targetRevision: 0.1.*
