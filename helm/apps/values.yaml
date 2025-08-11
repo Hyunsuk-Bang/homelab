@@ -33,7 +33,7 @@ apps:
 
   certManager:
     enabled: true
-    repoURL:: https://charts.jetstack.io
+    repoURL: https://charts.jetstack.io
     chart: cert-manager
     name: cert-manager
     namespace: hbang-resources
