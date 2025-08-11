@@ -33,6 +33,7 @@ apps:
 
   certManager:
     enabled: true
+    targetRevision: 1.18.2
     repoURL: https://charts.jetstack.io
     chart: cert-manager
     name: cert-manager
