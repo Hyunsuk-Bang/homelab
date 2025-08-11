@@ -1,3 +1,6 @@
+
+namespace: hbang-argocd
+
 apps:
   argocd:
     enabled: true
@@ -66,8 +69,8 @@ apps:
     repoURL: https://external-secrets.io
     chart: external-secrets
     targetRevision: 0.19.1
-    name: external-secrets
     namespace: hbang-resources
+    name: external-secrets
     values: {}
 
   secretAddons:
@@ -77,4 +80,4 @@ apps:
     name: secret-addons
     path: secret-addons
     targetRevision: 0.1.*
-    namespace:  hbang-argocd
+    namespace:  hbang-resources
