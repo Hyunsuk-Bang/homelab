@@ -78,6 +78,6 @@ apps:
     type: helm
     repoURL: https://github.com/Hyunsuk-Bang
     name: secret-addons
-    path: secret-addons
+    path: helm/secret-addons
     targetRevision: 0.1.*
     namespace:  hbang-resources
