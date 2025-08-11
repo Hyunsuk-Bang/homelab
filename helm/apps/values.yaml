@@ -64,6 +64,15 @@ apps:
     repoURL: https://helm.cilium.io
     values: {}
 
+  dex:
+    enabled: true
+    targetRevision: 0.23.0
+    name: dex
+    chart: dex
+    namespace: hbang-resources
+    repoURL: https://charts.dexidp.io
+    values: {}
+
   externalSecrets:
     enabled: true
     repoURL: https://external-secrets.io
