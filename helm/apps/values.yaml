@@ -4,9 +4,9 @@ namespace: hbang-argocd
 apps:
   argocd:
     enabled: true
-    targetRevision: 1.0.0
+    targetRevision: 8.2.7
     name: argocd
-    chart: argo
+    chart: argo-cd
     namespace: hbang-argocd
     repoURL: https://argoproj.github.io/argo-helm
     values:
