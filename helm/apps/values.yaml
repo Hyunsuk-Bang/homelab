@@ -1,8 +1,9 @@
 apps:
   argocd:
     enabled: true
-    targetRevision: 2.12.5
+    targetRevision: 1.0.0
     name: argocd
+    chart: argo
     namespace: hbang-argocd
     repoURL: https://argoproj.github.io/argo-helm
     values:
@@ -30,6 +31,8 @@ apps:
   cloudflareTunnelIngressController:
     enabled: true
     repoURL: https://helm.strrl.dev
+    chart:  cloudflare-tunnel-ingress-controller
+    targetRevision: 0.0.*
     name: cloudflare-tunnel-ingress-controller
     namespace: hbang-resources
     values:
@@ -53,16 +56,18 @@ apps:
     enabled: true
     targetRevision: 1.18.0
     name: cilium
+    chart: cilium
     namespace: kube-system
-    repoURL: https://helm.cilium.io/
+    repoURL: https://helm.cilium.io
     values: {}
 
-  externalSecret:
+  externalSecrets:
     enabled: true
+    repoURL: https://external-secrets.io
+    chart: external-secrets
     targetRevision: 0.19.1
-    name: external-secret
+    name: external-secrets
     namespace: hbang-resources
-    repoURL: https://charts.external-secrets.io
     values: {}
 
   secretAddons:

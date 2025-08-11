@@ -13,7 +13,7 @@ spec:
     {{- if $app.path }}
     path: {{ $app.path }}
     {{- else }}
-    chart: {{ $name }}
+    chart: {{ $app.chart }}
     {{- end }}
     helm:
       releaseName: {{ $name }}
