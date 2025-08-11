@@ -79,5 +79,5 @@ apps:
     repoURL: https://github.com/Hyunsuk-Bang/homelab.git
     name: secret-addons
     path: helm/secret-addons
-    targetRevision: 0.1.*
+    targetRevision: master
     namespace:  hbang-resources
