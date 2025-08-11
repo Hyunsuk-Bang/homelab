@@ -1,0 +1,139 @@
+# Copyright 2018 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- ansible.builtin.import_tasks: photon.yml
+  when: ansible_os_family == "VMware Photon OS"
+
+- ansible.builtin.import_tasks: amazonLinux.yml
+  when: ansible_distribution == "Amazon"
+
+# This is required until https://github.com/ansible/ansible/issues/77537 is fixed and used.
+- name: Override Flatcar's OS family
+  ansible.builtin.set_fact:
+    ansible_os_family: Flatcar
+  when: ansible_os_family == "Flatcar Container Linux by Kinvolk"
+  tags:
+    - facts
+
+- name: Ensure overlay module is present
+  community.general.modprobe:
+    name: overlay
+    state: present
+
+- name: Ensure br_netfilter module is present
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Persist required kernel modules
+  ansible.builtin.copy:
+    content: |
+      overlay
+      br_netfilter
+    dest: /etc/modules-load.d/kubernetes.conf
+    mode: "0644"
+
+- name: Set and persist kernel params
+  ansible.posix.sysctl:
+    name: "{{ item.param }}"
+    value: "{{ item.val }}"
+    state: present
+    sysctl_set: true
+    sysctl_file: "{{ sysctl_conf_file }}"
+    reload: true
+  loop:
+    - { param: net.bridge.bridge-nf-call-iptables, val: 1 }
+    - { param: net.bridge.bridge-nf-call-ip6tables, val: 1 }
+    - { param: net.ipv4.ip_forward, val: 1 }
+    - { param: net.ipv6.conf.all.forwarding, val: 1 }
+    - { param: net.ipv6.conf.all.disable_ipv6, val: 0 }
+    - { param: net.ipv4.tcp_congestion_control, val: bbr }
+    - { param: vm.overcommit_memory, val: 1 }
+    - { param: kernel.panic, val: 10 }
+    - { param: kernel.panic_on_oops, val: 1 }
+    - { param: fs.inotify.max_user_instances, val: 8192 }
+    - { param: fs.inotify.max_user_watches, val: 524288 }
+
+- name: Disable swap memory
+  ansible.builtin.shell: |
+    swapoff -a
+  when: ansible_memory_mb.swap.total != 0
+
+- name: Edit fstab file to disable swap
+  ansible.builtin.shell: sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
+  when: ansible_memory_mb.swap.total != 0
+
+- name: Disable conntrackd service
+  ansible.builtin.systemd:
+    name: conntrackd
+    state: stopped
+    enabled: false
+  when: ansible_os_family not in ["Common Base Linux Mariner", "Debian", "Flatcar", "Microsoft Azure Linux"]
+
+- name: Ensure auditd is running and comes on at reboot
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: Configure auditd rules for containerd
+  ansible.builtin.copy:
+    src: etc/audit/rules.d/containerd.rules
+    dest: /etc/audit/rules.d/containerd.rules
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family != "Flatcar" and enable_containerd_audit
+
+- name: Configure auditd rules for containerd (Flatcar)
+  ansible.builtin.copy:
+    src: etc/audit/rules.d/containerd.rules-flatcar
+    dest: /etc/audit/rules.d/containerd.rules
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Flatcar" and enable_containerd_audit
+
+- name: Ensure reverse packet filtering is set as strict
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.rp_filter
+    value: "1"
+    state: present
+    sysctl_set: true
+    reload: true
+  when: ansible_distribution == "Ubuntu"
+
+- name: Set transparent huge pages to madvise
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    backrefs: true
+    regexp: ^(?!.*transparent_hugepage=madvise)(GRUB_CMDLINE_LINUX=.*)("$)
+    line: \1 transparent_hugepage=madvise"
+  when: ansible_os_family == "RedHat"
+
+- name: Copy udev etcd network tuning rules
+  ansible.builtin.template:
+    src: etc/udev/rules.d/90-etcd-tuning.rules
+    dest: /etc/udev/rules.d/90-etcd-tuning.rules
+    mode: "0644"
+
+- name: Copy etcd network tuning script
+  ansible.builtin.copy:
+    src: usr/local/bin/etcd-network-tuning.sh
+    dest: "{{ external_binary_path }}/etcd-network-tuning.sh"
+    mode: "0755"
+
+- name: Set default HOME_MODE in login.defs (Flatcar)
+  ansible.builtin.shell: sed -ri "s/^#?HOME_MODE\>.*/HOME_MODE 0700/" /etc/login.defs
+  when: ansible_os_family == "Flatcar"

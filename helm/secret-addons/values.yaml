@@ -1,0 +1,41 @@
+secretStores:
+- name: hbang-homelab-secrets
+  namespace: hbang-resources
+  provider:
+    infisical:
+      hostAPI: https://app.infisical.com
+      auth:
+        universalAuthCredentials:
+          clientId:
+            key: clientId
+            namespace: hbang-resources
+            name: universal-auth-credentials
+          clientSecret:
+            key: clientSecret
+            namespace: hbang-resources
+            name: universal-auth-credentials
+      secretsScope:
+        projectSlug: hbang-homeloab-secrets-d-tl-n
+        environmentSlug: dev
+        secretsPath: /
+        recursive: false
+        expandSecretReferences: false
+
+externalSecrets:
+- name: infisical-managed-secrets
+  namespace: hbang-resources
+  secretStoreRef:
+    kind: SecretStore
+    name: hbang-homelab-secrets
+  target:
+    name: cloudflare-external-secret
+  data:
+  - secretKey: cloudflareAccountID
+    remoteRef:
+      key: cloudflareAccountID
+  - secretKey: cloudflareAPIToken
+    remoteRef:
+      key: cloudflareAPIToken
+  - secretKey: cloudflareTunnelName
+    remoteRef:
+      key: cloudflareTunnelName

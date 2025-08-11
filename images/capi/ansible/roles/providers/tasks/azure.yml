@@ -1,0 +1,97 @@
+# Copyright 2019 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- ansible.builtin.import_tasks: azurecli.yml
+  when: debug_tools | bool
+
+- name: Configure PTP
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    create: true
+    line: refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0
+  # Flatcar now includes this by default as of 3975.2.0 which causes this task to fail
+  when: ansible_os_family != "Flatcar" or (ansible_os_family == "Flatcar" and  ansible_distribution_version is version('3975.2.0', '<'))
+
+- name: Ensure makestep parameter set as per Azure recommendation
+  ansible.builtin.lineinfile:
+    path: /etc/chrony/chrony.conf
+    regexp: ^makestep
+    line: makestep 1.0 -1
+  # Flatcar now includes this by default as of 3975.2.0 which causes this task to fail
+  when: ansible_os_family != "Flatcar" or (ansible_os_family == "Flatcar" and  ansible_distribution_version is version('3975.2.0', '<'))
+
+- name: Install iptables persistence
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+    force_apt_get: true
+  vars:
+    packages:
+      - iptables-persistent
+  when: ansible_os_family == "Debian"
+
+- name: Block traffic to 168.63.129.16 port 80 for cve-2021-27075
+  ansible.builtin.copy:
+    src: files/etc/azure/iptables
+    dest: /etc/iptables/rules.v4
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Load iptable rules from file
+  community.general.iptables_state:
+    state: restored
+    path: /etc/iptables/rules.v4
+  when: ansible_os_family == "Debian"
+
+- name: Install netbase and nfs-common
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+    force_apt_get: true
+  vars:
+    packages:
+      - netbase
+      - nfs-common
+  when: ansible_os_family == "Debian"
+
+## refer to ../files/etc/cloud/cloud.cfg.d/15_azure-vnet.cfg
+## for more context on below file addition
+- name: Create azure-vnet config file
+  ansible.builtin.copy:
+    src: files/etc/cloud/cloud.cfg.d/15_azure-vnet.cfg
+    dest: /etc/cloud/cloud.cfg.d/15_azure-vnet.cfg
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Create the credential provider path
+  ansible.builtin.file:
+    path: /var/lib/kubelet/credential-provider
+    state: directory
+    mode: "0755"
+
+- name: Download OOT credential provider
+  ansible.builtin.get_url:
+    url: https://github.com/kubernetes-sigs/cloud-provider-azure/releases/latest/download/azure-acr-credential-provider-linux-amd64
+    dest: /var/lib/kubelet/credential-provider/acr-credential-provider
+    mode: "0755"
+
+- name: Download OOT credential provider config file
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/examples/out-of-tree/credential-provider-config.yaml
+    dest: /var/lib/kubelet/credential-provider-config.yaml
+    mode: "0644"

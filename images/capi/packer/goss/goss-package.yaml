@@ -1,0 +1,88 @@
+{{ if ne .Vars.OS "windows"}}
+kubernetes_version: &kubernetes_version
+  versions:
+    or:
+     - contain-element:
+         match-regexp: "^\\Q{{ .Vars.kubernetes_deb_version }}\\E(-\\d+(\\.\\d+)*)*$"
+     - contain-element:
+         match-regexp: "^\\Q{{ .Vars.kubernetes_rpm_version }}\\E(-\\d+(\\.\\d+)*)*$"
+
+kubernetes_cni_version: &kubernetes_cni_version
+  versions:
+{{ if or .Vars.kubernetes_cni_deb_version .Vars.kubernetes_cni_rpm_version }}
+    or:
+      - contain-element:
+          match-regexp: "^\\Q{{ .Vars.kubernetes_cni_deb_version }}\\E(-\\d+(\\.\\d+)*)*$"
+      - contain-element:
+          match-regexp: "^\\Q{{ .Vars.kubernetes_cni_rpm_version }}\\E(-\\d+(\\.\\d+)*)*$"
+{{ end }}
+
+package:
+# Flatcar uses Ignition instead of cloud-init
+  ntp:
+    installed: false
+    {{if and (eq .Vars.OS "ubuntu") (eq .Vars.PROVIDER "azure")}}
+    skip: true
+    {{end}}
+{{if eq .Vars.kubernetes_source_type "pkg"}}
+  kubeadm:
+    installed: true
+    <<: *kubernetes_version
+  kubelet:
+    installed: true
+    <<: *kubernetes_version
+  kubectl:
+    installed: true
+    <<: *kubernetes_version
+{{end}}
+{{if eq .Vars.kubernetes_cni_source_type "pkg"}}
+  kubernetes-cni:
+    installed: true
+    <<: *kubernetes_cni_version
+{{end}}
+# Looping over common packages for an OS
+{{range $name, $vers := index .Vars .Vars.OS "common-package"}}
+  {{$name}}:
+    installed: true
+  {{range $key, $val := $vers}}
+    {{$key}}: {{$val}}
+  {{end}}
+{{end}}
+# Looping over provider specific packages for an OS
+{{range $name, $vers := index .Vars .Vars.OS .Vars.PROVIDER "package"}}
+  {{$name}}:
+    installed: true
+  {{range $key, $val := $vers}}
+    {{$key}}: {{$val}}
+  {{end}}
+{{end}}
+
+# Iterate thru different OS Versions like RHEL7/8, Photon 3/4(future) etc.
+{{$distro_version := .Vars.OS_VERSION}}
+{{range $component := index .Vars .Vars.OS .Vars.PROVIDER "os_version"}}
+{{if eq $distro_version (index $component "distro_version")}}
+  {{ range $name, $vers := index $component "package"}}
+  {{$name}}:
+    installed: true
+  {{range $key, $val := $vers}}
+    {{$key}}: {{$val}}
+  {{end}}
+  {{end}}
+{{end}}
+{{end}}
+{{end}}
+
+
+{{ if eq .Vars.OS "windows"}} # Windows
+# Workaround until windows features are added to goss
+command:
+{{range $name, $vers := index .Vars .Vars.OS "common-windows-features"}}
+  "Windows Feature - {{ $name }}":
+    exec: powershell -command "(Get-WindowsFeature {{ $name }} | select *)"
+    exit-status: 0
+    stdout: {{range $vers.expected}}
+    - {{.}}
+    timeout: 60000
+    {{end}}
+{{end}}
+{{end}}

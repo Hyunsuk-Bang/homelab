@@ -1,0 +1,170 @@
+# Copyright 2018 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- ansible.builtin.include_tasks: aws.yml
+  when: packer_builder_type.startswith('amazon')
+
+- ansible.builtin.include_tasks: azure.yml
+  when: packer_builder_type.startswith('azure')
+
+- ansible.builtin.include_tasks: outscale.yml
+  when: packer_builder_type.startswith('outscale')
+
+- ansible.builtin.include_tasks: vmware.yml
+  when: packer_builder_type is search('vmware') or packer_builder_type is search('vsphere')
+
+- ansible.builtin.include_tasks: googlecompute.yml
+  when: packer_builder_type.startswith('googlecompute')
+
+- ansible.builtin.include_tasks: openstack.yml
+  when: packer_builder_type.startswith('openstack')
+
+- ansible.builtin.include_tasks: oci.yml
+  when: packer_builder_type.startswith('oracle-oci')
+
+- ansible.builtin.include_tasks: proxmox.yml
+  when: packer_builder_type.startswith('proxmox')
+
+- ansible.builtin.include_tasks: qemu.yml
+  when: packer_builder_type is search('qemu') and build_target is not search('raw')
+
+- ansible.builtin.include_tasks: cloudstack.yml
+  when: packer_builder_type is search('qemu') and provider is defined and provider is search('cloudstack')
+
+- ansible.builtin.include_tasks: raw.yml
+  when: packer_builder_type is search('qemu') and build_target is search('raw')
+
+- ansible.builtin.include_tasks: nutanix.yml
+  when: packer_builder_type is search('nutanix')
+
+- ansible.builtin.include_tasks: hcloud.yml
+  when: packer_builder_type is search('hcloud')
+
+- ansible.builtin.include_tasks: huaweicloud.yml
+  when: packer_builder_type.startswith('huaweicloud')
+
+- ansible.builtin.include_tasks: scaleway.yml
+  when: packer_builder_type.startswith('scaleway')
+
+- ansible.builtin.include_tasks: maas.yml
+  when: packer_builder_type is search('qemu') and provider is defined and provider is search('maas')
+
+# Create a boot order configuration
+# b/w containerd and cloud final, cloud config services
+
+- name: Creates unit file directory for cloud-final
+  ansible.builtin.file:
+    path: /etc/systemd/system/cloud-final.service.d
+    state: directory
+  when: ansible_os_family != "Flatcar"
+
+- name: Create cloud-final boot order drop in file
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/cloud-final.service.d/boot-order.conf
+    src: etc/systemd/system/cloud-final.service.d/boot-order.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family != "Flatcar"
+
+- name: Creates unit file directory for cloud-config
+  ansible.builtin.file:
+    path: /etc/systemd/system/cloud-config.service.d
+    state: directory
+  when: ansible_os_family != "Flatcar"
+
+- name: Create cloud-config boot order drop in file
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/cloud-config.service.d/boot-order.conf
+    src: etc/systemd/system/cloud-config.service.d/boot-order.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family != "Flatcar"
+
+# Some OS might disable cloud-final service on boot (rhel 7).
+# Enable all cloud-init services on boot.
+- name: Make sure all cloud init services are enabled
+  ansible.builtin.service:
+    name: "{{ item }}"
+    enabled: true
+  with_items:
+    - cloud-final
+    - cloud-config
+    - cloud-init
+    - cloud-init-local
+  when: ansible_os_family != "Flatcar"
+
+- name: Create cloud-init config file
+  ansible.builtin.copy:
+    src: files/etc/cloud/cloud.cfg.d/05_logging.cfg
+    dest: /etc/cloud/cloud.cfg.d/05_logging.cfg
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family != "Flatcar"
+
+# `feature_overrides.py` only works on old cloud-init versions (removed in https://github.com/canonical/cloud-init/pull/4228)...
+- name: Set cloudinit feature flags
+  ansible.builtin.copy:
+    src: usr/lib/python3/dist-packages/cloudinit/feature_overrides.py
+    dest: /usr/lib/python3/dist-packages/cloudinit/feature_overrides.py
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Set cloudinit feature flags for redhat 8
+  ansible.builtin.copy:
+    src: usr/lib/python3/site-packages/cloudinit/feature_overrides.py
+    dest: /usr/lib/python3.6/site-packages/cloudinit/feature_overrides.py
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "RedHat" and ansible_distribution == "RedHat" and ansible_distribution_major_version == "8"
+
+- name: Set cloudinit feature flags for redhat 9
+  ansible.builtin.copy:
+    src: usr/lib/python3/site-packages/cloudinit/feature_overrides.py
+    dest: /usr/lib/python3.9/site-packages/cloudinit/feature_overrides.py
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "RedHat" and ansible_distribution == "RedHat" and ansible_distribution_major_version == "9"
+
+# ...and `features.py` must be patched instead
+- name: Patch cloud-init feature flags for Debian-based OS
+  ansible.builtin.blockinfile:
+    path: /usr/lib/python3/dist-packages/cloudinit/features.py
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (by image-builder)"
+    block: "{{ lookup('file', 'cloud-init-features.patch') }}"
+  when: ansible_os_family == "Debian"
+
+- name: Patch cloud-init feature flags for RedHat 9
+  ansible.builtin.blockinfile:
+    path: /usr/lib/python3.9/site-packages/cloudinit/features.py
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (by image-builder)"
+    block: "{{ lookup('file', 'cloud-init-features.patch') }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution == "RedHat" and ansible_distribution_major_version == "9"
+
+- name: Ensure chrony is running
+  ansible.builtin.systemd:
+    enabled: true
+    state: started
+    daemon_reload: true
+    name: chronyd
+  when: >
+    (packer_builder_type.startswith('amazon') or packer_builder_type.startswith('azure')
+      or packer_builder_type is search('vmware') or packer_builder_type is search('vsphere'))
+      and ansible_os_family != "Flatcar"

@@ -1,0 +1,23 @@
+{{- $cluster := .Values.clusterName -}}
+{{- $ns := .Values.namespace | default "default" -}}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ $cluster }}
+  namespace: {{ $ns }}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        {{- range .Values.clusterNetwork.pods.cidrBlocks }}
+        - {{ . }}
+        {{- end }}
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: {{ printf "%s-control-plane" $cluster }}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: ProxmoxCluster
+    name: {{ printf "%s-proxmox-cluster" $cluster }}

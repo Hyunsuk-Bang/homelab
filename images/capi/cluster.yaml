@@ -1,0 +1,291 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: proxmox-quickstart
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: proxmox-quickstart-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: ProxmoxCluster
+    name: proxmox-quickstart
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxCluster
+metadata:
+  name: proxmox-quickstart
+  namespace: default
+spec:
+  allowedNodes: []
+  controlPlaneEndpoint:
+    host: 192.168.1.200
+    port: 6443
+  dnsServers:
+  - 8.8.8.8
+  - 1.1.1.1
+  ipv4Config:
+    addresses:
+    - 192.168.1.100-192.168.1.127
+    gateway: 192.168.1.254
+    prefix: 24
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: proxmox-quickstart-control-plane
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    files:
+    - content: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          creationTimestamp: null
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          containers:
+          - args:
+            - manager
+            env:
+            - name: cp_enable
+              value: "true"
+            - name: vip_interface
+              value: ""
+            - name: address
+              value: 192.168.1.200
+            - name: port
+              value: "6443"
+            - name: vip_arp
+              value: "true"
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
+            image: ghcr.io/kube-vip/kube-vip:v0.7.1
+            imagePullPolicy: IfNotPresent
+            name: kube-vip
+            resources: {}
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                - NET_RAW
+            volumeMounts:
+            - mountPath: /etc/kubernetes/admin.conf
+              name: kubeconfig
+          hostAliases:
+          - hostnames:
+            - localhost
+            - kubernetes
+            ip: 127.0.0.1
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/admin.conf
+              type: FileOrCreate
+            name: kubeconfig
+        status: {}
+      owner: root:root
+      path: /etc/kubernetes/manifests/kube-vip.yaml
+    - content: |
+        #!/bin/bash
+
+        # Copyright 2020 The Kubernetes Authors.
+        #
+        # Licensed under the Apache License, Version 2.0 (the "License");
+        # you may not use this file except in compliance with the License.
+        # You may obtain a copy of the License at
+        #
+        #     http://www.apache.org/licenses/LICENSE-2.0
+        #
+        # Unless required by applicable law or agreed to in writing, software
+        # distributed under the License is distributed on an "AS IS" BASIS,
+        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        # See the License for the specific language governing permissions and
+        # limitations under the License.
+
+        set -e
+
+        # Configure the workaround required for kubeadm init with kube-vip:
+        # xref: https://github.com/kube-vip/kube-vip/issues/684
+
+        # Nothing to do for kubernetes < v1.29
+        KUBEADM_MINOR="$(kubeadm version -o short | cut -d '.' -f 2)"
+        if [[ "$KUBEADM_MINOR" -lt "29" ]]; then
+          exit 0
+        fi
+
+        IS_KUBEADM_INIT="false"
+
+        # cloud-init kubeadm init
+        if [[ -f /run/kubeadm/kubeadm.yaml ]]; then
+          IS_KUBEADM_INIT="true"
+        fi
+
+        # ignition kubeadm init
+        if [[ -f /etc/kubeadm.sh ]] && grep -q -e "kubeadm init" /etc/kubeadm.sh; then
+          IS_KUBEADM_INIT="true"
+        fi
+
+        if [[ "$IS_KUBEADM_INIT" == "true" ]]; then
+          sed -i 's#path: /etc/kubernetes/admin.conf#path: /etc/kubernetes/super-admin.conf#' \
+            /etc/kubernetes/manifests/kube-vip.yaml
+        fi
+      owner: root:root
+      path: /etc/kube-vip-prepare.sh
+      permissions: "0700"
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          provider-id: proxmox://'{{ ds.meta_data.instance_id }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          provider-id: proxmox://'{{ ds.meta_data.instance_id }}'
+    preKubeadmCommands:
+    - /etc/kube-vip-prepare.sh
+    users:
+    - name: root
+      sshAuthorizedKeys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC7XGVszcBXhKnyC0bLur5OQh/KjrVkiEe1EUR3jSmjEovmeKuKzn5NujaSrXb0JMnkBJRIHpucsGCUW6gN8wFFngC3LFMQN/ymXODOoIQ4NLWMyt9qyAkvVk/I58uyhjhqobyjYDa75GLMgV4S2DaS214dF/kZH1/keCeRqpMikR/9TWjwMEAzu6Qf7ESufsaXgrA3KHL8wPGnzFWYo2UQ5SqlONtHajFGWr7+taA772qk4x3w4DugkFD0Z+wW/cE86Gr6L6dbrP520qBEHItf+Z9esYpng+G5pGN7CASL9Ykh6IQPbZN7i1ZOSBPDSID3X4CSAehDC6xh5Te830tOuRPqNVSzv6TytiFPoiQsNhaGFB8HgBV5EALx33sImKorWxf5V2ENMXPWjGJIxJY5iECV+i2DnkEGKtqeM0Kv4Fewv8IYS3TNmP16XjLrUS4IqePbZ1q1w38X/aBatcGOoxAHG2d0TQDDFZt9vOQT4/rjxdJbcVSZ96Y3BclAARcDVHJYIDrHLA/MpXp7+/DBIWxn+6chDh4YX0a6+C3DLtZzzXE9ja2Y3kbDvh+hJ1T4llRetlsyG2mMprP75FeQgQL07ryD1r032TKRnxSPfjVuY/fbXqtjIfp31BzcV9BG07SbYkZlyjgWGXRJXvR3o+6kZnpjm6PaWkfzRmzynQ==
+        root@hbang-px1
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: ProxmoxMachineTemplate
+      name: proxmox-quickstart-control-plane
+  replicas: 1
+  version: v1.32.4
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxMachineTemplate
+metadata:
+  name: proxmox-quickstart-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 100
+      format: qcow2
+      full: true
+      memoryMiB: 4096
+      network:
+        default:
+          bridge: vmbr0
+          model: virtio
+      numCores: 4
+      numSockets: 1
+      sourceNode: hbang-px1
+      templateID: 104
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: proxmox-quickstart-workers
+  namespace: default
+spec:
+  clusterName: proxmox-quickstart
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: proxmox-quickstart-worker
+      clusterName: proxmox-quickstart
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: ProxmoxMachineTemplate
+        name: proxmox-quickstart-worker
+      version: v1.32.4
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: proxmox-quickstart-workers2
+  namespace: default
+spec:
+  clusterName: proxmox-quickstart
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: proxmox-quickstart-worker
+      clusterName: proxmox-quickstart
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: ProxmoxMachineTemplate
+        name: proxmox-quickstart-worker2
+      version: v1.32.4
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxMachineTemplate
+metadata:
+  name: proxmox-quickstart-worker2
+  namespace: default
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 100
+      format: qcow2
+      full: true
+      memoryMiB: 4096
+      network:
+        default:
+          bridge: vmbr0
+          model: virtio
+      numCores: 4
+      numSockets: 1
+      sourceNode: hbang-px2
+      templateID: 104
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: proxmox-quickstart-worker
+  namespace: default
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            provider-id: proxmox://'{{ ds.meta_data.instance_id }}'
+      users:
+      - name: root
+        sshAuthorizedKeys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC7XGVszcBXhKnyC0bLur5OQh/KjrVkiEe1EUR3jSmjEovmeKuKzn5NujaSrXb0JMnkBJRIHpucsGCUW6gN8wFFngC3LFMQN/ymXODOoIQ4NLWMyt9qyAkvVk/I58uyhjhqobyjYDa75GLMgV4S2DaS214dF/kZH1/keCeRqpMikR/9TWjwMEAzu6Qf7ESufsaXgrA3KHL8wPGnzFWYo2UQ5SqlONtHajFGWr7+taA772qk4x3w4DugkFD0Z+wW/cE86Gr6L6dbrP520qBEHItf+Z9esYpng+G5pGN7CASL9Ykh6IQPbZN7i1ZOSBPDSID3X4CSAehDC6xh5Te830tOuRPqNVSzv6TytiFPoiQsNhaGFB8HgBV5EALx33sImKorWxf5V2ENMXPWjGJIxJY5iECV+i2DnkEGKtqeM0Kv4Fewv8IYS3TNmP16XjLrUS4IqePbZ1q1w38X/aBatcGOoxAHG2d0TQDDFZt9vOQT4/rjxdJbcVSZ96Y3BclAARcDVHJYIDrHLA/MpXp7+/DBIWxn+6chDh4YX0a6+C3DLtZzzXE9ja2Y3kbDvh+hJ1T4llRetlsyG2mMprP75FeQgQL07ryD1r032TKRnxSPfjVuY/fbXqtjIfp31BzcV9BG07SbYkZlyjgWGXRJXvR3o+6kZnpjm6PaWkfzRmzynQ==
+          root@hbang-px1

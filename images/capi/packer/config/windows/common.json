@@ -1,0 +1,16 @@
+{
+  "additional_debug_files": "",
+  "debug_tools": "true",
+  "disable_hypervisor": "false",
+  "http_proxy": "",
+  "https_proxy": "",
+  "netbios_host_name_compatibility": "true",
+  "no_proxy": "",
+  "nssm_url": "https://upstreamartifacts.azureedge.net/nssm/nssm.exe",
+  "prepull": "true",
+  "runtime": "containerd",
+  "ssh_source_url": "",
+  "windows_service_manager": "nssm",
+  "windows_updates_categories": "",
+  "windows_updates_kbs": ""
+}

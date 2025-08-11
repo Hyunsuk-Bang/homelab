@@ -1,0 +1,54 @@
+# Copyright 2020 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+dependencies:
+  - role: setup
+    vars:
+      rpms: "{{ common_rpms + al2_rpms + lookup('vars', 'common_' + build_target + '_rpms') }}"
+      debs: "{{ common_debs }}"
+    when: ansible_distribution == "Amazon" and ansible_distribution_version == "2"
+
+  - role: setup
+    vars:
+      rpms: "{{ common_rpms + al2023_rpms + lookup('vars', 'common_' + build_target + '_rpms') }}"
+      debs: "{{ common_debs }}"
+    when: ansible_distribution == "Amazon" and ansible_distribution_version == "2023"
+
+  - role: setup
+    vars:
+      rpms: "{{ common_rpms }}"
+      debs: "{{ common_debs }}"
+    when: packer_builder_type == "oracle-oci" and ansible_architecture == "aarch64"
+
+  - role: setup
+    vars:
+      rpms: >-
+        {{ (common_photon_rpms + lookup('vars', 'photon_' + ansible_distribution_major_version + '_rpms' )
+          + lookup('vars', 'common_' + build_target + '_photon_rpms')) }}
+    when: ansible_distribution == "VMware Photon OS"
+
+  - role: setup
+    vars:
+      rpms: >-
+        {{ ( common_rpms + rh8_rpms + lookup('vars', 'common_' + build_target + '_rpms') ) }}
+      debs: "{{ common_debs +  lookup('vars', 'common_' + build_target + '_debs') }}"
+    when: >
+      ansible_distribution not in ["VMware Photon OS", "Amazon"]
+        and not (packer_builder_type == "oracle-oci" and ansible_architecture == "aarch64")
+        and not packer_builder_type is search('qemu')
+
+  - role: setup
+    vars:
+      rpms: "{{ common_rpms + azurelinux_rpms + lookup('vars', 'common_' + build_target + '_rpms') }}"
+    when: ansible_distribution in ["Common Base Linux Mariner", "Microsoft Azure Linux"]

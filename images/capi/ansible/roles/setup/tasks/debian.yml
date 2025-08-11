@@ -1,0 +1,130 @@
+# Copyright 2018 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Put templated sources.list in place
+  ansible.builtin.template:
+    src: etc/apt/sources.list.j2
+    dest: /etc/apt/sources.list
+    mode: "0644"
+  # OCI Base images have the required apt sources list embedded inside the image, adding the sources list
+  # from this repo leads to build failures(especially in Arm), hence ignoring the step.
+  # Ubuntu 24.04 has changed to deb822 source management
+  # As a result the there is change in format source configurations and location
+  when: (packer_builder_type != "oracle-oci") and ((ansible_distribution == "Ubuntu") and (ansible_distribution_major_version is version('24', '<')))
+
+- name: Put templated ubuntu.sources in place
+  ansible.builtin.template:
+    src: etc/apt/sources.list.d/ubuntu.sources.j2
+    dest: /etc/apt/sources.list.d/ubuntu.sources
+    mode: "0644"
+  # Ubuntu 24.04 has changed to deb822 source management
+  # As a result the there is change in format source configurations and location
+  when: (ansible_distribution == "Ubuntu") and (ansible_distribution_major_version is version('24', '>='))
+
+- name: Put templated apt.conf.d/90proxy in place when defined
+  ansible.builtin.template:
+    src: etc/apt/apt.conf.d/90proxy
+    dest: /etc/apt/apt.conf.d/90proxy
+    mode: "0644"
+  when: http_proxy is defined or https_proxy is defined
+
+- name: Ensure cloud-final is in a running state
+  ansible.builtin.service:
+    name: cloud-final
+    state: started
+  check_mode: true
+  register: cloudfinalstatus
+  until: cloudfinalstatus.status.ActiveState == "active"
+  retries: 5
+  delay: 10
+  when: packer_builder_type == "oracle-oci" and extra_repos != ""
+
+- name: Find existing repo files
+  ansible.builtin.find:
+    depth: 1
+    paths:
+      - /etc/apt
+      - /etc/apt/sources.list.d
+    patterns: "*.list"
+  register: repo_files
+  when: disable_public_repos|bool
+
+- name: Disable repos
+  ansible.builtin.command: mv {{ item.path }} {{ item.path }}.disabled
+  loop: "{{ repo_files.files }}"
+  when: disable_public_repos|bool
+
+- name: Install extra repos
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/apt/sources.list.d/{{ item | basename }}
+    mode: "0644"
+  loop: "{{ extra_repos.split() }}"
+  when: extra_repos != ""
+
+- name: Hold nullboot
+  ansible.builtin.dpkg_selections:
+    name: nullboot
+    selection: hold
+  when: packer_build_name is search('cvm')
+
+- name: Add '--no-tpm --no-efivars' to nullboot post install script
+  ansible.builtin.command: sed -i 's/nullbootctl/nullbootctl --no-tpm --no-efivars/' /var/lib/dpkg/info/nullboot.postinst
+  when: packer_build_name is search('cvm')
+
+- name: Perform a dist-upgrade
+  ansible.builtin.apt:
+    force_apt_get: true
+    update_cache: true
+    upgrade: dist
+  register: apt_lock_status
+  until: apt_lock_status is not failed
+  retries: 5
+  delay: 10
+
+- name: Install baseline dependencies
+  ansible.builtin.apt:
+    force_apt_get: true
+    update_cache: true
+    name: "{{ debs }}"
+    state: latest
+  register: apt_lock_status
+  until: apt_lock_status is not failed
+  retries: 5
+  delay: 10
+
+- name: Install extra debs
+  ansible.builtin.apt:
+    force_apt_get: true
+    name: "{{ extra_debs.split() }}"
+    state: latest
+  register: apt_lock_status
+  until: apt_lock_status is not failed
+  retries: 5
+  delay: 10
+
+- name: Install pinned debs
+  ansible.builtin.apt:
+    force_apt_get: true
+    name: "{{ pinned_debs }}"
+    state: present
+    force: true
+  register: apt_lock_status
+  until: apt_lock_status is not failed
+  retries: 5
+  delay: 10
+
+- name: Remove '--no-tpm --no-efivars' from nullboot post install script
+  ansible.builtin.command: sed -i 's/nullbootctl --no-tpm --no-efivars/nullbootctl/' /var/lib/dpkg/info/nullboot.postinst
+  when: packer_build_name is search('cvm')

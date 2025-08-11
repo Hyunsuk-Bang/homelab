@@ -1,0 +1,145 @@
+{{- $cluster := .Values.clusterName -}}
+{{- $ns := .Values.namespace | default "default" -}}
+{{- $k8sVer := .Values.kubernetesVersion -}}
+{{- $controlPlaneMachines := .Values.controlPlane.machine }}
+{{- $totalCPReplicas := 0 }}
+{{- range $name, $cfg := $controlPlaneMachines }}
+  {{- $totalCPReplicas = add $totalCPReplicas $cfg.replicas }}
+{{- end }}
+---
+# KubeadmControlPlane using total replicas from all control plane machines
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: {{ printf "%s-control-plane" $cluster }}
+  namespace: {{ $ns }}
+spec:
+  replicas: {{ $totalCPReplicas }}
+  version: {{ $k8sVer }}
+  kubeadmConfigSpec:
+    files:
+    - content: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          creationTimestamp: null
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          containers:
+          - args:
+            - manager
+            env:
+            - name: cp_enable
+              value: "true"
+            - name: vip_interface
+              value: ""
+            - name: address
+              value: {{ quote .Values.proxmoxCluster.controlPlaneEndpoint.host }}
+            - name: port
+              value: {{ quote .Values.proxmoxCluster.controlPlaneEndpoint.port }}
+            - name: vip_arp
+              value: "true"
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
+            image: ghcr.io/kube-vip/kube-vip:v0.7.1
+            imagePullPolicy: IfNotPresent
+            name: kube-vip
+            resources: {}
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                - NET_RAW
+            volumeMounts:
+            - mountPath: /etc/kubernetes/admin.conf
+              name: kubeconfig
+          hostAliases:
+          - hostnames:
+            - localhost
+            - kubernetes
+            ip: 127.0.0.1
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/admin.conf
+              type: FileOrCreate
+            name: kubeconfig
+        status: {}
+      owner: root:root
+      path: /etc/kubernetes/manifests/kube-vip.yaml
+    - content: |
+        #!/bin/bash
+        set -e
+        KUBEADM_MINOR="$(kubeadm version -o short | cut -d '.' -f 2)"
+        if [[ "$KUBEADM_MINOR" -lt "29" ]]; then
+          exit 0
+        fi
+        IS_KUBEADM_INIT="false"
+        if [[ -f /run/kubeadm/kubeadm.yaml ]]; then
+          IS_KUBEADM_INIT="true"
+        fi
+        if [[ -f /etc/kubeadm.sh ]] && grep -q -e "kubeadm init" /etc/kubeadm.sh; then
+          IS_KUBEADM_INIT="true"
+        fi
+        if [[ "$IS_KUBEADM_INIT" == "true" ]]; then
+          sed -i 's#path: /etc/kubernetes/admin.conf#path: /etc/kubernetes/super-admin.conf#' \
+            /etc/kubernetes/manifests/kube-vip.yaml
+        fi
+      owner: root:root
+      path: /etc/kube-vip-prepare.sh
+      permissions: "0700"
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          provider-id: proxmox://'{{ print "{{ " }}ds.meta_data.instance_id {{ print " }}" }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          provider-id: proxmox://'{{ print "{{ " }}ds.meta_data.instance_id {{ print " }}" }}'
+    preKubeadmCommands:
+      {{- range .Values.kubeadm.initPreKubeadmCommands }}
+      - {{ . }}
+      {{- end }}
+    {{- with .Values.kubeadm.users }}
+    users:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: ProxmoxMachineTemplate
+      name: {{ printf "%s-control-plane-template" $cluster }}
+---
+# Control plane ProxmoxMachineTemplate:
+# Use the *first* control plane machine config as template (common pattern)
+{{- $firstCPMachine := index $controlPlaneMachines (first (keys $controlPlaneMachines)) }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxMachineTemplate
+metadata:
+  name: {{ printf "%s-control-plane-template" $cluster }}
+  namespace: {{ $ns }}
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: {{ $firstCPMachine.diskSizeGb }}
+      format: {{ $firstCPMachine.format }}
+      full: {{ $firstCPMachine.fullClone }}
+      memoryMiB: {{ $firstCPMachine.memoryMiB }}
+      network:
+        default:
+          bridge: {{ $firstCPMachine.network.bridge }}
+          model: {{ $firstCPMachine.network.model }}
+      numCores: {{ $firstCPMachine.numCores }}
+      numSockets: {{ $firstCPMachine.numSockets }}
+      sourceNode: {{ (first (keys $controlPlaneMachines)) }}
+      templateID: {{ $firstCPMachine.templateID }}

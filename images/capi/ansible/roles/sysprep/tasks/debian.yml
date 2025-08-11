@@ -1,0 +1,159 @@
+# Copyright 2019 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Define file modes
+  ansible.builtin.set_fact:
+    last_log_mode: "0664"
+    machine_id_mode: "0644"
+
+- name: Pin all installed packages with apt-mark
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg-query -f '${binary:Package}\n' -W | xargs apt-mark hold
+
+  args:
+    executable: /bin/bash
+
+- name: Unpin grub packages with apt-mark for MaaS
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg-query -f '${binary:Package}\n' -W | grep grub | xargs apt-mark unhold
+
+  args:
+    executable: /bin/bash
+  when: provider is defined and provider is search('maas')
+
+- name: Remove extra repos
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/{{ item | basename }}
+    state: absent
+  loop: "{{ extra_repos.split() }}"
+  when: remove_extra_repos and extra_repos != ""
+
+- name: Find disabled repo files
+  ansible.builtin.find:
+    depth: 1
+    paths:
+      - /etc/apt
+      - /etc/apt/sources.list.d
+    patterns: "*.list.disabled"
+  register: repo_files
+  when: disable_public_repos|default(false)|bool and reenable_public_repos|default(true)|bool
+
+- name: Enable repos
+  ansible.builtin.command: mv {{ item.path }} {{ item.path | regex_replace('.disabled') }}
+  loop: "{{ repo_files.files }}"
+  when: disable_public_repos|default(false)|bool and reenable_public_repos|default(true)|bool
+
+- name: Remove templated apt.conf.d/90proxy used for http(s)_proxy support
+  ansible.builtin.file:
+    path: /etc/apt/apt.conf.d/90proxy
+    state: absent
+  when: http_proxy is defined or https_proxy is defined
+
+- name: Get installed service
+  ansible.builtin.service_facts:
+
+- name: Stop auditing
+  ansible.builtin.service:
+    name: rsyslog
+    state: stopped
+  when: "'rsyslog' in services"
+
+- name: Remove apt package caches
+  ansible.builtin.apt:
+    autoclean: true
+    autoremove: true
+    force_apt_get: true
+
+- name: Remove apt package lists
+  ansible.builtin.file:
+    state: "{{ item.state }}"
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /var/lib/apt/lists, state: absent, mode: "0755" }
+    - { path: /var/lib/apt/lists, state: directory, mode: "0755" }
+
+- name: Disable apt-daily services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+
+- name: Get installed packages
+  ansible.builtin.package_facts:
+
+- name: Disable unattended upgrades if installed
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    state: stopped
+    enabled: false
+  when: "'unattended-upgrades' in ansible_facts.packages"
+
+- name: Reset network interface IDs
+  ansible.builtin.file:
+    state: absent
+    path: /etc/udev/rules.d/70-persistent-net.rules
+
+- name: Determine if update-grub is present
+  ansible.builtin.stat:
+    path: /usr/sbin/update-grub
+  register: _stat_update_grub
+
+- name: Configure grub for non graphical consoles
+  ansible.builtin.copy:
+    src: etc/default/grub.d/50-cloudimg-settings.cfg
+    dest: /etc/default/grub.d/50-cloudimg-settings.cfg
+    group: root
+    owner: root
+    mode: "0644"
+  notify:
+    - Update debian grub
+  when: _stat_update_grub.stat.exists
+
+- name: Removing subiquity disable cloud-init networking config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-networking.cfg
+    state: absent
+  when: ansible_distribution_version is version('22.04', '>=')
+
+- name: Removing 99-installer.cfg which sets the cloud-init datasource to None
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/99-installer.cfg
+    state: absent
+  when: ansible_distribution_version is version('22.04', '>=')
+
+- name: Removing subiquity curtin preserve sources config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/curtin-preserve-sources.cfg
+    state: absent
+  when: ansible_distribution_version is version('22.04', '>=')
+
+- name: Removing cloud-init ds identify config
+  ansible.builtin.file:
+    path: /etc/cloud/ds-identify.cfg
+    state: absent
+  when: ansible_distribution_version is version('22.04', '>=')
+
+- name: Removing 90-installer-network.cfg installer network configuration
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d/90-installer-network.cfg
+    state: absent
+  when: ansible_distribution_version is version('22.04', '>=')

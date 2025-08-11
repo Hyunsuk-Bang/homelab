@@ -1,0 +1,57 @@
+# Copyright 2020 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Create kubelet directory structure
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ systemdrive.stdout | trim }}\\var\\log\\kubelet"
+    - "{{ systemdrive.stdout | trim }}\\etc\\kubernetes"
+    - "{{ systemdrive.stdout | trim }}\\etc\\kubernetes\\manifests"
+    - "{{ systemdrive.stdout | trim }}\\etc\\kubernetes\\pki"
+
+# this is required in 1.22 and below due to invalid absolute path handling
+# https://github.com/kubernetes-sigs/image-builder/issues/853
+- name: Symlink kubelet pki folder
+  ansible.windows.win_shell: New-Item -path $env:SystemDrive\var\lib\kubelet\etc\kubernetes\pki -type SymbolicLink -value  $env:SystemDrive\etc\kubernetes\pki\ -Force
+  when: kubernetes_semver is version('v1.23.0', '<')
+
+- ansible.builtin.import_tasks: nssm.yml
+  when: windows_service_manager == "nssm"
+
+- ansible.builtin.import_tasks: sc.yml
+  when: windows_service_manager == "windows_service"
+
+# Dependency selection: https://www.reddit.com/r/ansible/comments/imfdgn/setting_a_variable_conditionally/g41anaf/?utm_source=reddit&utm_medium=web2x&context=3
+- name: Ensure kubelet is installed
+  ansible.windows.win_service:
+    name: kubelet
+    dependencies: ["{{ runtime_service }}"]
+    start_mode: auto
+  vars:
+    dependencies:
+      containerd: containerd
+      default: containerd
+    runtime_service: "{{ dependencies[runtime] | default(dependencies['containerd']) }}"
+
+- name: Add firewall rule for kubelet
+  community.windows.win_firewall_rule:
+    name: kubelet
+    localport: 10250
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: true

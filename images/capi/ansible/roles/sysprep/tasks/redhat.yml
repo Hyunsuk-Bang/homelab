@@ -1,0 +1,101 @@
+# Copyright 2019 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Define file modes
+  ansible.builtin.set_fact:
+    last_log_mode: "0644"
+    machine_id_mode: "0444"
+
+- name: Get installed packages
+  ansible.builtin.package_facts:
+
+- name: Create the package list
+  ansible.builtin.set_fact:
+    package_list: "{{ ansible_facts.packages.keys() | join(' ') }}"
+
+- name: Exclude the packages from upgrades
+  ansible.builtin.lineinfile:
+    path: /etc/yum.conf
+    regexp: ^exclude=
+    line: exclude={{ package_list }}
+  when: ansible_distribution != "Amazon" or ansible_distribution_version != "2023"
+
+- name: Exclude packages from upgrade
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/dnf.conf
+    regexp: ^excludepkgs=
+    line: excludepkgs={{ package_list }}
+  when: ansible_distribution == "Amazon" and ansible_distribution_version == "2023"
+
+- ansible.builtin.import_tasks: rpm_repos.yml
+
+# Oracle Linux does not have temp-disk-swapfile service
+- name: Disable swap service and ensure it is masked
+  ansible.builtin.systemd:
+    name: temp-disk-swapfile
+    enabled: false
+    masked: true
+  when: ansible_memory_mb.swap.total != 0 and ansible_distribution_major_version|int <= 7
+
+- name: Disable swap service and ensure it is masked on RHEL 8
+  ansible.builtin.systemd:
+    name: swap.target
+    enabled: false
+    masked: true
+  when: ansible_memory_mb.swap.total != 0 and ansible_distribution_major_version|int == 8
+
+- name: Remove RHEL subscription
+  when:
+    - ansible_distribution == "RedHat"
+    - lookup('env', 'RHSM_USER') | length > 0
+    - lookup('env', 'RHSM_PASS') | length > 0
+  block:
+    - name: Enable repo mgmt with subscription-manager
+      ansible.builtin.command: subscription-manager config --rhsm.manage_repos=1
+    - name: Remove subscriptions
+      community.general.rhsm_repository:
+        name: "*"
+        state: disabled
+    - name: Unregister system
+      community.general.redhat_subscription:
+        state: absent
+    - name: Clean local subscription data
+      ansible.builtin.command: subscription-manager clean
+
+- name: Remove yum package caches
+  ansible.builtin.yum:
+    autoremove: true
+    lock_timeout: 60
+
+- name: Remove yum package lists
+  ansible.builtin.command: /usr/bin/yum -y clean all
+
+- name: Reset network interface IDs
+  ansible.builtin.shell: |
+    set -o pipefail
+    sed -i '/^\(HWADDR\|UUID\)=/d' /etc/sysconfig/network-scripts/ifcfg-*
+  when: packer_builder_type != "googlecompute" and ansible_distribution_major_version|int != 9
+
+- name: Migrate interface configuration files to NetworkManager keyfiles
+  ansible.builtin.command: nmcli connection migrate
+  when: packer_builder_type != "googlecompute" and ansible_distribution_major_version|int == 9
+
+- name: Reset network interface IDs
+  ansible.builtin.shell: sed -i '/^\(uuid\)=/d' /etc/NetworkManager/system-connections/*.nmconnection
+  when: packer_builder_type != "googlecompute" and ansible_distribution_major_version|int == 9
+
+- name: Remove the kickstart log
+  ansible.builtin.file:
+    state: absent
+    path: /root/anaconda-ks.cfg

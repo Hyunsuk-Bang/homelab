@@ -1,0 +1,84 @@
+---
+# Copyright 2021 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- name: Create OpenSSH directory structure
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ programfiles.stdout | trim }}\\OpenSSH"
+    - "{{ alluserprofile.stdout | trim }}\\ssh"
+
+# Win32-OpenSSH requires SYSTEM and Administrator groups having Write
+# permissions on directory 'C:\Program Files\OpenSSH', authenticated
+# users having only Read and Execute permissions on it, see:
+#   https://github.com/PowerShell/Win32-OpenSSH/wiki/Install-Win32-OpenSSH
+#
+#   "Make sure binary location has the Write permissions to just to SYSTEM,
+#   Administrator groups. Authenticated users should and only have Read and
+#   Execute."
+#
+# Folder 'C:\Program Files\OpenSSH' inherits users and permissions from its
+# parent folder when it is created, by default, SYSTEM and Administrator
+# already have Write permissions on it, the only exception is the inherited
+# user BUILTIN\Users has ReadAndExecute permission but only authenticated
+# users are allowed to have such permission, this prevent us from connecting
+# to the sshd server, just remove it.
+- name: Disable inheritance of OpenSSH directory
+  ansible.windows.win_acl_inheritance:
+    path: "{{ programfiles.stdout | trim }}\\OpenSSH"
+    state: absent
+    reorganize: true
+- name: Remove permission for Users
+  ansible.windows.win_acl:
+    path: "{{ programfiles.stdout | trim }}\\OpenSSH"
+    user: BUILTIN\Users
+    rights: ReadAndExecute,Synchronize
+    type: allow
+    state: absent
+    inherit: None
+    propagation: None
+
+- name: Download OpenSSH Archive
+  ansible.windows.win_get_url:
+    url: "{{ ssh_source_url }}"
+    dest: "{{ tempdir.stdout | trim }}\\OpenSSH.zip"
+  register: ssh
+  retries: 5
+  delay: 3
+  until: ssh is not failed
+
+- name: Unzip OpenSSH Archive
+  community.windows.win_unzip:
+    src: "{{ ssh.dest }}"
+    dest: "{{ tempdir.stdout | trim }}"
+    recurse: false
+    delete_archive: true
+
+- name: Install OpenSSH
+  ansible.windows.win_shell: |
+    Get-ChildItem -Path "{{ tempdir.stdout | trim }}\OpenSSH-Win64\*" -Recurse | Move-Item -Destination "{{ programfiles.stdout | trim }}\OpenSSH"
+    Get-ChildItem -Path "{{ programfiles.stdout | trim }}\OpenSSH" | Unblock-File
+    & 'C:\Program Files\OpenSSH\install-sshd.ps1'
+
+- name: Add OpenSSH firewall rule
+  community.windows.win_firewall_rule:
+    name: sshd
+    localport: 22
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: true

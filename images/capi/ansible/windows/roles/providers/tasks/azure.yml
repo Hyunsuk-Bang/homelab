@@ -1,0 +1,86 @@
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Create Azure wireserver access group
+  ansible.windows.win_group:
+    name: WireServerAccess
+    description: Controls access to the Azure WireServer
+
+# AzureGuestAgent and Cloudbase-init need access to wireserver otherwise VM doesn't boot
+# So we give the users access via the firewall security filters
+# https://docs.microsoft.com/en-us/powershell/module/netsecurity/set-netfirewallsecurityfilter
+#
+# Permissions set on the Firewall rule:
+#   S-1-1-0 is Everyone. We mark this as Allow (A) to ensure the Block is enforced for all users other than on the exception list.
+#   S-1-5-18 is LocalSystem used by AzureGuestAgent.  We mark this as Deny (D) to add to Block exception list.
+#   We also add the newly created group WireServerAccess to the block exception list and add Cloudbase-init user later.
+#
+# View the details of the SDDL string used with ConvertFrom-SddlString and see well known sids: https://docs.microsoft.com/en-us/windows/win32/secauthz/well-known-sids
+- name: Block traffic to 168.63.129.16 port 80 for cve-2021-27075
+  ansible.windows.win_shell: |
+    $wsg = Get-LocalGroup -n "WireServerAccess"
+    $r = New-NetFirewallRule -DisplayName 'Block-Outbound-168.63.129.16-port-80-for-cve-2021-27075' -Direction Outbound -RemoteAddress '168.63.129.16' -RemotePort '80' -Protocol TCP -Action Block
+    $r | Get-NetFirewallSecurityFilter | Set-NetFirewallSecurityFilter -LocalUser "O:LSD:(D;;CC;;;S-1-5-18)(D;;CC;;;$($wsg.SID.Value))(A;;CC;;;S-1-1-0)"
+  become: true
+  become_method: runas
+  become_user: SYSTEM
+
+- name: Add users to WireServerAccessGroup
+  ansible.windows.win_group_membership:
+    name: WireServerAccess
+    members:
+      - cloudbase-init
+
+- name: Add additional users
+  ansible.windows.win_group_membership:
+    name: WireServerAccess
+    members: "{{ users }}"
+  vars:
+    users: "{{ wire_server_users.split(',') if (wire_server_users is defined) and (wire_server_users | length > 0) else [] }}"
+
+- name: Install Azure CLI
+  when: debug_tools | bool
+  block:
+
+    - name: Download Azure CLI MSI installer
+      ansible.windows.win_get_url:
+        url: https://aka.ms/installazurecliwindowsx64
+        dest: C:\azure-cli.msi
+
+    - name: Run Azure CLI installer
+      ansible.windows.win_package:
+        path: C:\azure-cli.msi
+        state: present
+
+    - name: Clean up Azure CLI installer file
+      ansible.windows.win_file:
+        path: C:\azure-cli.msi
+        state: absent
+
+- name: Create the credential provider path
+  ansible.windows.win_file:
+    path: C:\var\lib\kubelet\credential-provider
+    state: directory
+
+- name: Download OOT credential provider
+  ansible.windows.win_get_url:
+    url: https://github.com/kubernetes-sigs/cloud-provider-azure/releases/latest/download/azure-acr-credential-provider-windows-amd64.exe
+    dest: C:\var\lib\kubelet\credential-provider\acr-credential-provider.exe
+
+# It is a workaround for K8s < 1.30.
+# Detail: https://github.com/kubernetes-sigs/cloud-provider-azure/issues/4533
+- name: Copy OOT credential provider binary
+  when: kubernetes_semver is version('v1.30.0', '<')
+  ansible.windows.win_shell: copy C:\var\lib\kubelet\credential-provider\acr-credential-provider.exe C:\var\lib\kubelet\credential-provider\acr-credential-provider
+- name: Download OOT credential provider config file
+  ansible.windows.win_get_url:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/examples/out-of-tree/credential-provider-config-win.yaml
+    dest: C:\var\lib\kubelet\credential-provider-config.yaml

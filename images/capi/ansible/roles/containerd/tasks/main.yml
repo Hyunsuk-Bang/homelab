@@ -1,0 +1,212 @@
+# Copyright 2018 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- ansible.builtin.import_tasks: debian.yml
+  when: ansible_os_family == "Debian"
+
+- ansible.builtin.import_tasks: redhat.yml
+  when: ansible_os_family in ["Common Base Linux Mariner", "Microsoft Azure Linux", "RedHat"]
+
+- ansible.builtin.import_tasks: photon.yml
+  when: ansible_os_family == "VMware Photon OS"
+
+# TODO(vincepri): Use deb/rpm packages once available.
+# See https://github.com/containerd/containerd/issues/1508 for context.
+- name: Download containerd
+  ansible.builtin.get_url:
+    url: "{{ containerd_url }}"
+    checksum: sha256:{{ containerd_sha256 }}
+    dest: /tmp/containerd.tar.gz
+    mode: "0600"
+
+- name: Download containerd-wasm-shims
+  vars:
+    sha256sums: "{{ containerd_wasm_shims_sha256 | from_json }}"
+    runtime_versions: "{{ containerd_wasm_shims_runtime_versions | from_json }}"
+  ansible.builtin.get_url:
+    url: "{{ containerd_wasm_shims_url | replace('<SHIM>', item) | replace('<RTVERSION>', runtime_versions[item]) }}"
+    checksum: sha256:{{ sha256sums[item] }}
+    dest: /tmp/{{ item }}_wasm_shim.tar.gz
+    mode: "0600"
+  when: containerd_wasm_shims_runtimes | length > 0
+  loop: "{{ containerd_wasm_shims_runtimes | split(',') }}"
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ sysusr_prefix }}/bin"
+    state: directory
+    mode: "0755"
+
+# TODO(vincepri): This unpacks the entire tar in the root directory
+# we should find a better way to check what's being unpacked and where.
+- name: Unpack containerd
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/containerd.tar.gz
+    dest: "{{ containerd_prefix | default('/') }}"
+    extra_opts:
+      - --no-overwrite-dir
+  when: ansible_os_family != "Flatcar"
+
+# Install containerd Wasm shims specified in a comma-separated string. Known runtimes are 'lunatic', 'slight', 'spin', and 'wws'.
+- name: Unpack containerd-wasm-shims
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/{{ item }}_wasm_shim.tar.gz
+    dest: "{{ sysusr_prefix }}/bin"
+    extra_opts:
+      - --no-overwrite-dir
+  when: ansible_os_family != "Flatcar" and (containerd_wasm_shims_runtimes | length > 0)
+  loop: "{{ containerd_wasm_shims_runtimes | split(',') }}"
+
+- name: Unpack containerd for Flatcar to /opt/bin
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/containerd.tar.gz
+    dest: "{{ containerd_prefix | default('/') }}"
+    extra_opts:
+      - --absolute-names
+      - --transform
+      - s@usr@opt@
+      - --transform
+      - s@sbin@bin@
+      - --transform
+      - s@opt/local@opt@
+  when: ansible_os_family == "Flatcar"
+
+# Install containerd Wasm shims specified in a comma-separated string. Known runtimes are 'lunatic', 'slight', 'spin', and 'wws'.
+- name: Unpack containerd-wasm-shims for Flatcar to /opt/bin
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /tmp/{{ item }}_wasm_shim.tar.gz
+    dest: "{{ sysusr_prefix }}/bin"
+    extra_opts:
+      - --no-overwrite-dir
+  when: ansible_os_family == "Flatcar" and (containerd_wasm_shims_runtimes | length > 0)
+  loop: "{{ containerd_wasm_shims_runtimes | split(',') }}"
+
+# Remove /opt/cni directory, as we will install cni later
+- name: Delete /opt/cni directory
+  ansible.builtin.file:
+    path: /opt/cni
+    state: absent
+
+# Remove /etc/cni directory, as we will configure cni later
+- name: Delete /etc/cni directory
+  ansible.builtin.file:
+    path: /etc/cni
+    state: absent
+
+- name: Create unit file directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/containerd.service.d
+    state: directory
+
+- name: Create systemd unit drop-in file for containerd to run from /opt/bin
+  ansible.builtin.template:
+    dest: /etc/systemd/system/containerd.service.d/10-opt-bin-custom.conf
+    src: etc/systemd/system/containerd-flatcar.conf
+    mode: "0600"
+  when: ansible_os_family == "Flatcar"
+
+- name: Create containerd memory pressure drop-in file
+  ansible.builtin.template:
+    dest: /etc/systemd/system/containerd.service.d/memory-pressure.conf
+    src: etc/systemd/system/containerd.service.d/memory-pressure.conf
+    mode: "0644"
+
+- name: Create containerd max tasks drop-in file
+  ansible.builtin.template:
+    dest: /etc/systemd/system/containerd.service.d/max-tasks.conf
+    src: etc/systemd/system/containerd.service.d/max-tasks.conf
+    mode: "0644"
+
+- name: Create containerd LimitNOFILE drop in file
+  ansible.builtin.template:
+    dest: /etc/systemd/system/containerd.service.d/limit-nofile.conf
+    src: etc/systemd/system/containerd.service.d/limit-nofile.conf
+    mode: "0644"
+  when: ansible_os_family in ["Common Base Linux Mariner", "Flatcar", "Microsoft Azure Linux"]
+
+- name: Create containerd http proxy conf file if needed
+  ansible.builtin.template:
+    dest: /etc/systemd/system/containerd.service.d/http-proxy.conf
+    src: etc/systemd/system/containerd.service.d/http-proxy.conf
+    mode: "0644"
+  when: http_proxy is defined or https_proxy is defined
+
+- name: Creates containerd config directory
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+
+- name: Creates containerd certificates directory
+  ansible.builtin.file:
+    path: /etc/containerd/certs.d
+    state: directory
+
+- name: Copy in containerd config file {{ containerd_config_file }}
+  vars:
+    runtime_versions: "{{ containerd_wasm_shims_runtime_versions | from_json }}"
+  ansible.builtin.template:
+    dest: /etc/containerd/config.toml
+    src: "{{ containerd_config_file }}"
+    mode: "0644"
+
+- name: Copy in crictl config
+  ansible.builtin.template:
+    dest: /etc/crictl.yaml
+    src: etc/crictl.yaml
+
+- name: Start containerd service
+  ansible.builtin.systemd:
+    name: containerd
+    daemon_reload: true
+    enabled: true
+    state: restarted
+
+- name: Delete containerd tarball
+  ansible.builtin.file:
+    path: /tmp/containerd.tar.gz
+    state: absent
+
+- name: Delete containerd-wasm-shims tarballs
+  ansible.builtin.file:
+    path: /tmp/{{ item }}_wasm_shims.tar.gz
+    state: absent
+  when: containerd_wasm_shims_runtimes | length > 0
+  loop: "{{ containerd_wasm_shims_runtimes | split(',') }}"
+
+- name: Download runsc for gvisor
+  ansible.builtin.get_url:
+    dest: "{{ sysusr_prefix }}/bin/{{ item }}"
+    url: https://storage.googleapis.com/gvisor/releases/release/{{ containerd_gvisor_version }}/{{ ansible_architecture }}/{{ item }}
+    mode: "0755"
+    owner: root
+    group: root
+    checksum: sha512:https://storage.googleapis.com/gvisor/releases/release/{{ containerd_gvisor_version }}/{{ ansible_architecture }}/{{ item }}.sha512
+  loop:
+    - runsc
+    - containerd-shim-runsc-v1
+  when: containerd_gvisor_runtime | bool
+
+- name: Install runsc as a runtime
+  ansible.builtin.command:
+    cmd: >
+      {{ sysusr_prefix }}/bin/runsc install
+  register: runsc_install_output
+  when: containerd_gvisor_runtime | bool
+  changed_when:
+    - runsc_install_output.rc == 0
+    - runsc_install_output.stderr is search('Successfully added')

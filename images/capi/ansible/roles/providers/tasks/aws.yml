@@ -1,0 +1,71 @@
+# Copyright 2018 The Kubernetes Authors.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- ansible.builtin.include_tasks: awscliv2.yml
+  when: ansible_distribution != "Amazon"
+
+# Remove after https://github.com/aws/amazon-ssm-agent/issues/235 is fixed.
+- name: Install aws agents RPM on Redhat distributions
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+    disable_gpg_check: true
+  with_items:
+    - "{{ amazon_ssm_agent_rpm }}"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Amazon"
+
+- name: Ensure ssm agent is running RPM
+  ansible.builtin.service:
+    name: amazon-ssm-agent
+    state: started
+    enabled: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install aws agents Ubuntu
+  ansible.builtin.shell: snap install amazon-ssm-agent --classic
+  when: ansible_distribution == "Ubuntu"
+
+- name: Ensure ssm agent is running Ubuntu
+  ansible.builtin.service:
+    name: snap.amazon-ssm-agent.amazon-ssm-agent.service
+    state: started
+    enabled: true
+  when: ansible_distribution == "Ubuntu"
+
+- name: Disable Hyper-V KVP protocol daemon on Ubuntu
+  ansible.builtin.systemd:
+    name: hv-kvp-daemon
+    state: stopped
+    enabled: false
+  when: ansible_os_family == "Debian"
+
+- name: Create cloud-init custom data source list
+  ansible.builtin.copy:
+    src: files/etc/cloud/cloud.cfg.d/90_dpkg.cfg
+    dest: /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>=')
+
+- name: Create custom cloud-init data source
+  ansible.builtin.copy:
+    src: usr/lib/python3/dist-packages/cloudinit/sources/DataSourceEc2Kubernetes.py
+    dest: /usr/lib/python3/dist-packages/cloudinit/sources/DataSourceEc2Kubernetes.py
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>=')

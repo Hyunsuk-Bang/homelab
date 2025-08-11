@@ -1,0 +1,25 @@
+{{- $cluster := .Values.clusterName -}}
+{{- $ns := .Values.namespace | default "default" -}}
+---
+# ProxmoxCluster resource
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxCluster
+metadata:
+  name: {{ printf "%s-proxmox-cluster" $cluster }}
+  namespace: {{ $ns }}
+spec:
+  allowedNodes: []
+  controlPlaneEndpoint:
+    host: {{ .Values.proxmoxCluster.controlPlaneEndpoint.host }}
+    port: {{ .Values.proxmoxCluster.controlPlaneEndpoint.port }}
+  dnsServers:
+    {{- range .Values.proxmoxCluster.dnsServers }}
+    - {{ . }}
+    {{- end }}
+  ipv4Config:
+    addresses:
+      {{- range .Values.proxmoxCluster.ipv4.addresses }}
+      - {{ . }}
+      {{- end }}
+    gateway: {{ .Values.proxmoxCluster.ipv4.gateway }}
+    prefix: {{ .Values.proxmoxCluster.ipv4.prefix }}

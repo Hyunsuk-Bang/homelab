@@ -1,0 +1,70 @@
+apps:
+  argocd:
+    enabled: true
+    targetRevision: 8.2.7
+    namespace: hbang-argocd
+    repoURL: https://argoproj.github.io/argo-helm
+    values:
+      namespaceOverride: hbang-argocd
+      redis-ha:
+        enabled: true
+      controller:
+        replicas: 1
+      server:
+        replicas: 2
+      repoServer:
+        replicas: 2
+      applicationSet:
+        replicas: 2
+      global:
+        domain: argocd.hbang-k8s.com
+      configs:
+        params:
+          server.insecure: true
+      server:
+        ingress:
+          enabled: true
+          ingressClassName: cloudflare-tunnel
+
+  cloudflareTunnelIngressController:
+    enabled: true
+    repoURL: https://helm.strrl.dev
+    namespace: hbang-resources
+    values:
+      cloudflare:
+        secretRef:
+          name: cloudflare-external-secret
+          accountIDKey: cloudflareAccountID
+          tunnelNameKey: cloudflareTunnelName
+          apiTokenKey: cloudflareAPIToken
+      ingressClass:
+        name: cloudflare-tunnel
+        controllerValue: strrl.dev/cloudflare-tunnel-ingress-controller
+        isDefaultClass: true
+      image:
+        repository: cr.strrl.dev/strrl/cloudflare-tunnel-ingress-controller
+        pullPolicy: IfNotPresent
+        tag: ""
+      replicaCount: 3
+
+  cilium:
+    enabled: true
+    targetRevision: 1.18.0
+    namespace: kube-system
+    repoURL: https://helm.cilium.io/
+    values: {}
+
+  externalSecret:
+    enabled: true
+    targetRevision: 0.19.1
+    namespace: hbang-resources
+    repoURL: https://charts.external-secrets.io
+    values: {}
+
+  secretAddons:
+    enabled: true
+    type: helm
+    repoURL: https://gtihub.com/hbang3/
+    path: secret-addons
+    targetRevision: 0.1.*
+    namespace:  hbang-argocd

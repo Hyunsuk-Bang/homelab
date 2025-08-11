@@ -1,0 +1,76 @@
+{{- $cluster := .Values.clusterName -}}
+{{- $ns := .Values.namespace | default "default" -}}
+{{- $k8sVer := .Values.kubernetesVersion -}}
+---
+# Worker MachineDeployments and ProxmoxMachineTemplates
+{{- range $node, $cfg := .Values.worker.machines }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: ProxmoxMachineTemplate
+metadata:
+  name: {{ printf "%s-worker-%s" $cluster $node | replace "." "-" }}
+  namespace: {{ $ns }}
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: {{ $cfg.diskSizeGb }}
+      format: {{ $cfg.format }}
+      full: {{ $cfg.fullClone }}
+      memoryMiB: {{ $cfg.memoryMiB }}
+      network:
+        default:
+          bridge: {{ $cfg.network.bridge }}
+          model: {{ $cfg.network.model }}
+      numCores: {{ $cfg.numCores }}
+      numSockets: {{ $cfg.numSockets }}
+      sourceNode: {{ $node }}
+      templateID: {{ $cfg.templateID }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: {{ printf "%s-worker-%s" $cluster $node | replace "." "-" }}
+  namespace: {{ $ns }}
+spec:
+  clusterName: {{ $cluster }}
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: {{ printf "%s-worker" $cluster }}
+      clusterName: {{ $cluster }}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: ProxmoxMachineTemplate
+        name: {{ printf "%s-worker-%s" $cluster $node | replace "." "-" }}
+      version: {{ $k8sVer }}
+---
+{{- end }}
+# KubeadmConfigTemplate
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: {{ printf "%s-worker" $cluster }}
+  namespace: {{ $ns }}
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            provider-id: proxmox://'{{ print "{{ " }}ds.meta_data.instance_id {{ print " }}" }}'
+      {{- with .Values.kubeadm.users }}
+      users:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

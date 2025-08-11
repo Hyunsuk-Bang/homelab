@@ -1,0 +1,13 @@
+/guestinfo-datasource.json
+/capv-image-uploader.json
+/packer_cache/
+/output-*/
+/output/
+/.bin/
+/.local/bin/
+manifest.json
+**.DS_Store
+
+# Goss test droppings
+debug-goss-spec.yaml
+goss-spec.yaml
