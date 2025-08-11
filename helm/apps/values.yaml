@@ -1,7 +1,7 @@
 apps:
   argocd:
     enabled: true
-    targetRevision: 8.2.7
+    targetRevision: 2.12.5
     name: argocd
     namespace: hbang-argocd
     repoURL: https://argoproj.github.io/argo-helm
