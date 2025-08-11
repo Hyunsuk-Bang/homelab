@@ -71,7 +71,16 @@ apps:
     chart: dex
     namespace: hbang-resources
     repoURL: https://charts.dexidp.io
-    values: {}
+    values:
+      config:
+        storage:
+          type: memory
+        ingress:
+          enabled: true
+          hosts:
+          - host: dex.hbang-k8s.com
+            paths:
+            - path: /
 
   externalSecrets:
     enabled: true
