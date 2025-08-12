@@ -110,7 +110,7 @@ apps:
     type: helm
     repoURL: https://github.com/Hyunsuk-Bang/homelab.git
     name: local-storage-class
-    path: helm/local-storage-classl
+    path: helm/local-storage-class
     targetRevision: master
 
   secretAddons:
