@@ -105,6 +105,14 @@ apps:
     name: external-secrets
     values: {}
 
+  localStorageClass:
+    enabled: true
+    type: helm
+    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
+    name: local-storage-class
+    path: helm/local-storage-classl
+    targetRevision: master
+
   secretAddons:
     enabled: true
     type: helm
