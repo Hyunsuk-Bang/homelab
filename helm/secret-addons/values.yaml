@@ -67,11 +67,11 @@ externalSecrets:
     name: ejbca-postgres
   target:
     name: ejbca-postgres
-  template:
-    metadata:
-      annotations:
-        reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-        reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "hbang-ejbca"
+    template:
+      metadata:
+        annotations:
+          reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "hbang-ejbca"
   data:
   - secretKey: postgres-admin-password
     remoteRef:
