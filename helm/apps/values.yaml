@@ -151,6 +151,9 @@ apps:
     namespace: hbang-ejbca
     values:
       type: postgresql
+      storage:
+        size: 8Gi
+        storageClass: local-storage
 
   localStorageClass:
     enabled: true
