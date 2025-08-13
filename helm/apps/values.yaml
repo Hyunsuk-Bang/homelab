@@ -141,6 +141,17 @@ apps:
         - ejbca.hbang-k8s.com
       replicaCount: 2
 
+  ejbcaPostgresCluster:
+    enabled: true #postgresOperator must be enabled
+    type: helm
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cluster
+    targetRevision: 0.3.1
+    name: ejbca-postgres-cluster
+    namespace: hbang-ejbca
+    values:
+      type: postgresql
+
   localStorageClass:
     enabled: true
     type: helm
@@ -162,6 +173,8 @@ apps:
       crd:
         create: true
       replicaCount: 2
+
+
 
   secretAddons:
     enabled: true
