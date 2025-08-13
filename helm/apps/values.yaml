@@ -157,6 +157,8 @@ apps:
     name: cloudnative-pg-operator
     namespace: hbang-resources
     values:
+      crd:
+        create: true
       replicaCount: 2
 
   secretAddons:
