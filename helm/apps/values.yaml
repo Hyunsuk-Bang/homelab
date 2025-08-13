@@ -148,6 +148,22 @@ apps:
     path: helm/local-storage-class
     targetRevision: master
 
+  postgres:
+    enabled: true
+    type: helm
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: postgres
+    name: ejbca-postgres
+    targetRevision: 16.7.24
+    namespace: hbang-ejbca
+    values:
+      auth:
+        existingSecret: ejbca-postgres
+        secretKeys:
+          adminPasswordKey: postgres-admin-password
+          userPasswordKey: postgres-admin-password
+          replicationPasswordKey: postgres-admin-password
+
   secretAddons:
     enabled: true
     type: helm
