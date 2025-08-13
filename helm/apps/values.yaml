@@ -148,21 +148,16 @@ apps:
     path: helm/local-storage-class
     targetRevision: master
 
-  postgres:
+  postgresOperator:
     enabled: true
     type: helm
-    repoURL: https://charts.bitnami.com/bitnami
-    chart: postgres
-    name: ejbca-postgres
-    targetRevision: 16.7.24
-    namespace: hbang-ejbca
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cloudnative-pg
+    targetRevision: 0.25.0
+    name: cloudnative-pg-operator
+    namespace: hbang-resources
     values:
-      auth:
-        existingSecret: ejbca-postgres
-        secretKeys:
-          adminPasswordKey: postgres-admin-password
-          userPasswordKey: postgres-admin-password
-          replicationPasswordKey: postgres-admin-password
+      replicaCount: 2
 
   secretAddons:
     enabled: true
