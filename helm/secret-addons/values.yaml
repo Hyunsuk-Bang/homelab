@@ -21,7 +21,7 @@ secretStores:
         recursive: false
         expandSecretReferences: false
 - name: ejbca-postgres
-  namespace: hbang-ejbca
+  namespace: hbang-resources
   provider:
     infisical:
       hostAPI: https://app.infisical.com
@@ -61,7 +61,7 @@ externalSecrets:
     remoteRef:
       key: cloudflareTunnelName
 - name: ejbca-postgres
-  namespace: hbang-ejbca
+  namespace: hbang-resources
   secretStoreRef:
     kind: SecretStore
     name: hbang-ejbca
