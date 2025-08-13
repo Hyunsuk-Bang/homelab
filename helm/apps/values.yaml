@@ -103,7 +103,42 @@ apps:
     targetRevision: 0.19.1
     namespace: hbang-resources
     name: external-secrets
-    values: {}
+    values:
+      replicaCount: 2
+      certController:
+        replicaCount: 2
+      webhook:
+        replicaCount: 2
+
+  ejbca:
+    enabled: true
+    repoURL: https://keyfactor.github.io/ejbca-community-helm
+    targetRevision: 9.1.1
+    chart: ejbca
+    name: ejbca
+    namespace: hbang-ejbca
+    values:
+      ejbca:
+        useEphemeralH2Database: false
+        env:
+          DATABASE_JDBC_URL: jdbc:postgresql://postgresql-server:5432/ejbcadb
+        envRaw:
+        - name: DATABASE_PASSWORD
+          valueFrom:
+           secretKeyRef:
+             name: ejbca-db-credentials
+             key: database_password
+        - name: DATABASE_USER
+          valueFrom:
+           secretKeyRef:
+             name: ejbca-db-credentials
+             key: database_user
+      ingress:
+        enabled: true
+        className: cloudflare-tunnel
+        hosts:
+        - ejbca.hbang-k8s.com
+      replicaCount: 2
 
   localStorageClass:
     enabled: true
@@ -121,3 +156,13 @@ apps:
     path: helm/secret-addons
     targetRevision: master
     namespace:  hbang-resources
+
+  reflector:
+    enabled: true
+    type: helm
+    repoURL: https://emberstack.github.io/helm-charts
+    chart: reflector
+    targetRevision: 9.1.25
+    name: reflector
+    namespace: hbang-resources
+    values: {}
