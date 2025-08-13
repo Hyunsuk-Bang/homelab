@@ -67,6 +67,11 @@ externalSecrets:
     name: ejbca-postgres
   target:
     name: ejbca-postgres
+  tmeplate:
+    metadata:
+      annotations:
+        replicator.v1.mittwald.de/replication-allowed: "true"
+        replicator.v1.mittwald.de/replication-allowed-namespaces: "hbang-ejbca"
   data:
   - secretKey: postgres-admin-password
     remoteRef:
