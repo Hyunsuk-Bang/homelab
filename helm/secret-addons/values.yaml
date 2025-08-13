@@ -17,7 +17,28 @@ secretStores:
       secretsScope:
         projectSlug: hbang-homeloab-secrets-d-tl-n
         environmentSlug: dev
-        secretsPath: /
+        secretsPath: /homelab
+        recursive: false
+        expandSecretReferences: false
+- name: ejbca-postgres
+  namespace: hbang-ejbca
+  provider:
+    infisical:
+      hostAPI: https://app.infisical.com
+      auth:
+        universalAuthCredentials:
+          clientId:
+            key: clientId
+            namespace: hbang-resources
+            name: universal-auth-credentials
+          clientSecret:
+            key: clientSecret
+            namespace: hbang-resources
+            name: universal-auth-credentials
+      secretsScope:
+        projectSlug: hbang-homeloab-secrets-d-tl-n
+        environmentSlug: dev
+        secretsPath: /homelab/ejbca
         recursive: false
         expandSecretReferences: false
 
@@ -39,3 +60,20 @@ externalSecrets:
   - secretKey: cloudflareTunnelName
     remoteRef:
       key: cloudflareTunnelName
+- name: ejbca-postgres
+  namespace: hbang-ejbca
+  secretStoreRef:
+    kind: SecretStore
+    name: hbang-ejbca
+  target:
+    name: ejbca-postgres
+  data:
+  - secretKey: postgres-admin-password
+    remoteRef:
+      key: postgres-admin-password
+  - secretKey: postgres-user-password
+    remoteRef:
+      key: postgres-user-password
+  - secretKey: postgres-replication-password
+    remoteRef:
+      key: postgres-replication-password
