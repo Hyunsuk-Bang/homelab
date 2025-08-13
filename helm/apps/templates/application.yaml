@@ -5,6 +5,10 @@ kind: Application
 metadata:
   name: {{ $app.name }}
   namespace: {{ $.Values.namespace }}
+  {{- if $app.serverSideApply }}
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
+  {{- end }}
 spec:
   project: default
   source:

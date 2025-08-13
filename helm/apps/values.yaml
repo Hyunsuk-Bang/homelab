@@ -101,6 +101,7 @@ apps:
     repoURL: https://external-secrets.io
     chart: external-secrets
     targetRevision: 0.19.1
+    serverSideApply: true
     namespace: hbang-resources
     name: external-secrets
     values:
@@ -154,6 +155,7 @@ apps:
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
     targetRevision: 0.25.0
+    serverSideApply: true
     name: cloudnative-pg-operator
     namespace: hbang-resources
     values:
