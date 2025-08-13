@@ -64,7 +64,7 @@ externalSecrets:
   namespace: hbang-resources
   secretStoreRef:
     kind: SecretStore
-    name: hbang-ejbca
+    name: ejbac-postgres
   target:
     name: ejbca-postgres
   data:
