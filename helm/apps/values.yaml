@@ -183,6 +183,8 @@ apps:
         local:
           zfs:
             enabled: false
+          lvm:
+            enabled: false
 
   postgresOperator:
     enabled: false
