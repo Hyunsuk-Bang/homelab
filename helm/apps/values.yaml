@@ -188,6 +188,8 @@ apps:
     chart: mariadb-operator-crds
     targetRevision: 25.8.3
     name: maridb-operator-crd
+    syncOptions:
+    - ServerSideApply=true
     namespace: hbang-resources
     values: {}
 
