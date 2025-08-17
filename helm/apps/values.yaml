@@ -179,6 +179,10 @@ apps:
         enabled: false
       alloy:
         enabled: false
+      engines:
+        local:
+          zfs:
+            enabled: false
 
   postgresOperator:
     enabled: false
