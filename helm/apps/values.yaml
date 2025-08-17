@@ -123,7 +123,7 @@ apps:
         replicaCount: 2
 
   ejbca:
-    enabled: true
+    enabled: false
     repoURL: repo.keyfactor.com/charts
     targetRevision: 9.1.1
     chart: ejbca-ce
@@ -156,7 +156,7 @@ apps:
       replicaCount: 2
 
   ejbcaPostgresCluster:
-    enabled: true #postgresOperator must be enabled
+    enabled: false #postgresOperator must be enabled
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cluster
@@ -180,6 +180,36 @@ apps:
     name: local-storage-class
     path: helm/local-storage-class
     targetRevision: master
+
+  mariadbCRD:
+    enabled: true
+    type: helm
+    repoURL: https://helm.mariadb.com/mariadb-operator
+    chart: mariadb-operator-crds
+    targetRevision: 25.8.3
+    name: maridb-operator-crd
+    namespace: hbang-resources
+    values: {}
+
+  mariadbOperator:
+    enabled: true
+    type: helm
+    repoURL: https://helm.mariadb.com/mariadb-operator
+    chart: mariadb-operator
+    targetRevision: 25.8.3
+    name: maridb-operator
+    namespace: hbang-resources
+    values: {}
+
+  mariadbEjbca:
+    enabled: true
+    type: helm
+    repoURL: https://helm.mariadb.com/mariadb-operator
+    chart: mariadb-cluster
+    targetRevision: 25.8.3
+    name: mariadb-ejbca-cluster
+    namespace: hbang-ejbca
+    values: {}
 
   nfsCsiDriver:
     enabled: true
@@ -205,7 +235,7 @@ apps:
         - nfsvers=4.1
 
   postgresOperator:
-    enabled: true
+    enabled: false
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
