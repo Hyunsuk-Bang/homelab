@@ -124,16 +124,16 @@ apps:
 
   ejbca:
     enabled: true
-    repoURL: https://keyfactor.github.io/ejbca-community-helm
+    repoURL: repo.keyfactor.com/charts
     targetRevision: 9.1.1
-    chart: ejbca
+    chart: ejbca-ce
     name: ejbca
     namespace: hbang-ejbca
     values:
       ejbca:
         useEphemeralH2Database: false
         env:
-          DATABASE_JDBC_URL: jdbc:postgresql://postgresql-server:5432/ejbcadb
+          DATABASE_JDBC_URL: jdbc:postgresql://ejbca-postgres-cluster-rw.hbang-ejbca.svc.cluster.local:5432/ejbcadb
         envRaw:
         - name: DATABASE_PASSWORD
           valueFrom:
@@ -149,7 +149,10 @@ apps:
         enabled: true
         className: cloudflare-tunnel
         hosts:
-        - ejbca.hbang-k8s.com
+        - host: ejbca.hbang-k8s.com
+          paths:
+          - path: /ejbca
+            pathType: Prefix
       replicaCount: 2
 
   ejbcaPostgresCluster:
