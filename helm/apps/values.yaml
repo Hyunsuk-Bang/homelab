@@ -209,16 +209,12 @@ apps:
     name: mariadb-ejbca-cluster
     namespace: hbang-ejbca
     values:
-      mariadb:
-        rootPasswordSecretKeyRef:
-          name: mariadb
-          key: root-password
       databases:
       - name: ejbcadb
         characterSet: utf8
       users:
       - name: ejbca
-        passwordKeyRef:
+        passwordSecretKeyRef:
           name: mariadb
           key: password
 
