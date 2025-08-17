@@ -212,16 +212,14 @@ apps:
     name: mariadb-ejbca-cluster
     namespace: hbang-ejbca
     values:
-      mariadb:
-        rootPasswordSecretKeyRef:
-          geenate: true
-      database:
+      databases:
       - name: ejbcadb
         characterSet: utf8
       users:
       - name: ejbca
         passwordKeyRef:
-          generate: true
+          name: mariadb
+          key: password
 
   nfsCsiDriver:
     enabled: true
