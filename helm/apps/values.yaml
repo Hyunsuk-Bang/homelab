@@ -172,7 +172,11 @@ apps:
     targetRevision: 4.3.2
     name: openebs
     namespace: hbang-resources
-    values: {}
+    values:
+      loki:
+        enabled: false
+      alloy:
+        enabled: false
 
   postgresOperator:
     enabled: false
