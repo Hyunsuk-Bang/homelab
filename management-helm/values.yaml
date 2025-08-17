@@ -37,7 +37,7 @@ controlPlane:
 worker:
   machines:
     hbang-px1:
-      templateID: 101
+      templateID: 113
       replicas: 2
       numCores: 4
       numSockets: 1
@@ -49,7 +49,7 @@ worker:
         bridge: vmbr0
         model: virtio
     hbang-px2:
-      templateID: 106
+      templateID: 115
       replicas: 2
       numCores: 4
       numSockets: 1
@@ -61,7 +61,7 @@ worker:
         bridge: vmbr0
         model: virtio
     hbang-px3:
-      templateID: 107
+      templateID: 114
       replicas: 2
       numCores: 4
       numSockets: 1
