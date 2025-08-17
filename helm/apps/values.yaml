@@ -133,18 +133,15 @@ apps:
       ejbca:
         useEphemeralH2Database: false
         env:
-          DATABASE_JDBC_URL: jdbc:postgresql://ejbca-postgres-cluster-rw.hbang-ejbca.svc.cluster.local:5432/ejbcadb
+          DATABASE_JDBC_URL: jdbc:mariadb://mariadb-ejbca-cluster-mariadb-cluster.hbang-ejbca.svc.cluster.local:3306/
         envRaw:
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
               key: password
-              name: ejbca-postgres-cluster-app
+              name: mariadb
         - name: DATABASE_USER
-          valueFrom:
-            secretKeyRef:
-              key: user
-              name: ejbca-postgres-cluster-app
+          value: ejbca
       ingress:
         enabled: true
         className: cloudflare-tunnel
@@ -212,6 +209,10 @@ apps:
     name: mariadb-ejbca-cluster
     namespace: hbang-ejbca
     values:
+      mariadb:
+        rootPasswordSecretKeyRef:
+          name: mariadb
+          key: root-password
       databases:
       - name: ejbcadb
         characterSet: utf8
