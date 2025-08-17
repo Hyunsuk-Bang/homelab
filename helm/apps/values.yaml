@@ -123,7 +123,7 @@ apps:
         replicaCount: 2
 
   ejbca:
-    enabled: false
+    enabled: true
     repoURL: repo.keyfactor.com/charts
     targetRevision: 9.1.1
     chart: ejbca-ce
@@ -211,7 +211,17 @@ apps:
     targetRevision: 25.8.3
     name: mariadb-ejbca-cluster
     namespace: hbang-ejbca
-    values: {}
+    values:
+      mariadb:
+        rootPasswordSecretKeyRef:
+          geenate: true
+      database:
+      - name: ejbcadb
+        characterSet: utf8
+      users:
+      - name: ejbca
+        passwordKeyRef:
+          generate: true
 
   nfsCsiDriver:
     enabled: true
