@@ -79,7 +79,7 @@ apps:
     values: {}
 
   dex:
-    enabled: true
+    enabled: false
     targetRevision: 0.23.0
     name: dex
     chart: dex
@@ -112,7 +112,7 @@ apps:
         replicaCount: 2
 
   ejbca:
-    enabled: true
+    enabled: false
     repoURL: https://keyfactor.github.io/ejbca-community-helm
     targetRevision: 9.1.1
     chart: ejbca
@@ -142,7 +142,7 @@ apps:
       replicaCount: 2
 
   ejbcaPostgresCluster:
-    enabled: true #postgresOperator must be enabled
+    enabled: false #postgresOperator must be enabled
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cluster
@@ -164,8 +164,18 @@ apps:
     path: helm/local-storage-class
     targetRevision: master
 
-  postgresOperator:
+  openebs:
     enabled: true
+    type: helm
+    repoURL: https://openebs.github.io/openebs
+    chart: openebs
+    targetRevision: 4.3.2
+    name: openebs
+    namespace: hbang-resources
+    values: {}
+
+  postgresOperator:
+    enabled: false
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
@@ -177,8 +187,6 @@ apps:
       crd:
         create: true
       replicaCount: 2
-
-
 
   secretAddons:
     enabled: true
