@@ -207,6 +207,8 @@ apps:
     serverSideApply: true
     name: cloudnative-pg-operator
     namespace: hbang-resources
+    syncOptions:
+    - ServerSideApply=true
     values:
       crd:
         create: true
