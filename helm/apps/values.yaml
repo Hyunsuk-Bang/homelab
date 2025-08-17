@@ -165,13 +165,13 @@ apps:
     namespace: hbang-ejbca
     values:
       type: postgresql
-      initdb:
-        postInitSQL:
-        - CREATE DATABASE ejbcadb
       cluster:
         storage:
           size: 8Gi
           storageClass: nfs-csi
+        initdb:
+          postInitSQL:
+          - CREATE DATABASE ejbcadb
 
   localStorageClass:
     enabled: true
