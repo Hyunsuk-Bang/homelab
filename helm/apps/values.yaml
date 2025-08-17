@@ -122,54 +122,6 @@ apps:
       webhook:
         replicaCount: 2
 
-  ejbca:
-    enabled: true
-    repoURL: repo.keyfactor.com/charts
-    targetRevision: 9.1.1
-    chart: ejbca-ce
-    name: ejbca
-    namespace: hbang-ejbca
-    values:
-      ejbca:
-        useEphemeralH2Database: false
-        env:
-          DATABASE_JDBC_URL: jdbc:mariadb://mariadb-ejbca-cluster-mariadb-cluster.hbang-ejbca.svc.cluster.local:3306/
-        envRaw:
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: password
-              name: mariadb
-        - name: DATABASE_USER
-          value: ejbca
-      ingress:
-        enabled: true
-        className: cloudflare-tunnel
-        hosts:
-        - host: ejbca.hbang-k8s.com
-          paths:
-          - path: /ejbca
-            pathType: Prefix
-      replicaCount: 2
-
-  ejbcaPostgresCluster:
-    enabled: false #postgresOperator must be enabled
-    type: helm
-    repoURL: https://cloudnative-pg.github.io/charts
-    chart: cluster
-    targetRevision: 0.3.1
-    name: ejbca-postgres-cluster
-    namespace: hbang-ejbca
-    values:
-      type: postgresql
-      cluster:
-        storage:
-          size: 8Gi
-          storageClass: nfs-csi
-        initdb:
-          postInitSQL:
-          - CREATE DATABASE ejbcadb
-
   localStorageClass:
     enabled: true
     type: helm
@@ -177,46 +129,6 @@ apps:
     name: local-storage-class
     path: helm/local-storage-class
     targetRevision: master
-
-  mariadbCRD:
-    enabled: true
-    type: helm
-    repoURL: https://helm.mariadb.com/mariadb-operator
-    chart: mariadb-operator-crds
-    targetRevision: 25.8.3
-    name: maridb-operator-crd
-    syncOptions:
-    - ServerSideApply=true
-    namespace: hbang-resources
-    values: {}
-
-  mariadbOperator:
-    enabled: true
-    type: helm
-    repoURL: https://helm.mariadb.com/mariadb-operator
-    chart: mariadb-operator
-    targetRevision: 25.8.3
-    name: maridb-operator
-    namespace: hbang-resources
-    values: {}
-
-  mariadbEjbca:
-    enabled: true
-    type: helm
-    repoURL: https://helm.mariadb.com/mariadb-operator
-    chart: mariadb-cluster
-    targetRevision: 25.8.3
-    name: mariadb-ejbca-cluster
-    namespace: hbang-ejbca
-    values:
-      databases:
-      - name: ejbcadb
-        characterSet: utf8
-      users:
-      - name: ejbca
-        passwordSecretKeyRef:
-          name: mariadb
-          key: password
 
   nfsCsiDriver:
     enabled: true
