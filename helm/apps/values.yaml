@@ -173,6 +173,8 @@ apps:
     name: openebs
     namespace: hbang-resources
     values:
+      minio:
+        enabled: false
       loki:
         enabled: false
       alloy:
