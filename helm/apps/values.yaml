@@ -186,7 +186,16 @@ apps:
     targetRevision: 0.30.1
     name: vualt
     namespace: hbang-resources
-    values: {}
+    values:
+      server:
+        ha:
+          enabled: true
+          replicas: 3
+      ingress:
+        enabled: true
+        ingressClassName: cloudflare-tunnel
+        hosts:
+        -  host: vault.hbang-k8s.com
 
   reflector:
     enabled: true
