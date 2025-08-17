@@ -175,27 +175,28 @@ apps:
     path: helm/local-storage-class
     targetRevision: master
 
-  openebs:
+  nfsCsiDriver:
     enabled: true
     type: helm
-    repoURL: https://openebs.github.io/openebs
-    chart: openebs
-    targetRevision: 4.3.2
-    name: openebs
+    repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+    chart: csi-driver-nfs
+    targetRevision: 4.9.0
+    name: csi-driver-nfs
     namespace: hbang-resources
     values:
-      minio:
-        enabled: false
-      loki:
-        enabled: false
-      alloy:
-        enabled: false
-      engines:
-        local:
-          zfs:
-            enabled: false
-          lvm:
-            enabled: false
+      storageClass:
+        create: true
+        name: nfs-csi
+        annotations:
+          storageclass.kubernetes.io/is-default-class: "true"
+        parameters:
+          server: 192.168.1.69
+          share: /srv/nfs/proxmox
+          mountPermissions: "0"
+        reclaimPolicy: Delete
+        volumeBindingMode: Immediate
+        mountOptions:
+        - nfsvers=4.1
 
   postgresOperator:
     enabled: false
