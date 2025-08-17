@@ -123,7 +123,7 @@ apps:
         replicaCount: 2
 
   ejbca:
-    enabled: false
+    enabled: true
     repoURL: https://keyfactor.github.io/ejbca-community-helm
     targetRevision: 9.1.1
     chart: ejbca
@@ -153,7 +153,7 @@ apps:
       replicaCount: 2
 
   ejbcaPostgresCluster:
-    enabled: false #postgresOperator must be enabled
+    enabled: true #postgresOperator must be enabled
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cluster
@@ -165,7 +165,7 @@ apps:
       cluster:
         storage:
           size: 8Gi
-          storageClass: local-storage
+          storageClass: nfs-csi
 
   localStorageClass:
     enabled: true
@@ -199,7 +199,7 @@ apps:
         - nfsvers=4.1
 
   postgresOperator:
-    enabled: false
+    enabled: true
     type: helm
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
