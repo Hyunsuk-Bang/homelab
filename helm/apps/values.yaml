@@ -137,14 +137,14 @@ apps:
         envRaw:
         - name: DATABASE_PASSWORD
           valueFrom:
-           secretKeyRef:
-             name: ejbca-db-credentials
-             key: database_password
+            secretKeyRef:
+              key: password
+              name: ejbca-postgres-cluster-app
         - name: DATABASE_USER
           valueFrom:
-           secretKeyRef:
-             name: ejbca-db-credentials
-             key: database_user
+            secretKeyRef:
+              key: user
+              name: ejbca-postgres-cluster-app
       ingress:
         enabled: true
         className: cloudflare-tunnel
@@ -165,6 +165,9 @@ apps:
     namespace: hbang-ejbca
     values:
       type: postgresql
+      initdb:
+        postInitSQL:
+        - CREATE DATABASE ejbcadb
       cluster:
         storage:
           size: 8Gi
