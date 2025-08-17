@@ -178,6 +178,16 @@ apps:
     targetRevision: master
     namespace:  hbang-resources
 
+  vault:
+    enabled: true
+    type: helm
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.30.1
+    name: vualt
+    namespace: hbang-resources
+    values: {}
+
   reflector:
     enabled: true
     type: helm
