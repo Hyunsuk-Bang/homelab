@@ -191,6 +191,9 @@ apps:
         ha:
           enabled: true
           replicas: 3
+          raft:
+            enabled: true
+            setNodeId: true
       ingress:
         enabled: true
         ingressClassName: cloudflare-tunnel
