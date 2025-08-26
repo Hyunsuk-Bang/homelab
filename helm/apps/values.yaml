@@ -2,15 +2,6 @@
 namespace: hbang-argocd
 
 apps:
-  apps:
-    enabled: true
-    type: helm
-    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
-    targetRevision: master
-    name: apps
-    path: helm/apps
-    namespace:  hbang-argocd
-
   argocd:
     enabled: true
     targetRevision: 8.2.7
