@@ -144,6 +144,24 @@ apps:
         mountOptions:
         - nfsvers=4.1
 
+  prometheusStack:
+    enabled: true
+    type: helm
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    values:
+      ingress:
+        enabled: true
+        ingressClassName: cloudflare-tunnel
+        hosts:
+        - prometheus.hbang-k8s.com
+      grafana:
+        ingress:
+          enabled: true
+          hosts:
+          - monitoring.hbang-k8s.com
+
+
   postgresOperator:
     enabled: false
     type: helm
