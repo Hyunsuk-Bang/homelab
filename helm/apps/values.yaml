@@ -149,6 +149,7 @@ apps:
     type: helm
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
+    targetRevision: 77.12.0
     name: prometheus-stack
     namespace: prometheus
     values:
