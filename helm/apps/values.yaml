@@ -155,11 +155,12 @@ apps:
     syncOptions:
     - ServerSideApply=true
     values:
-      ingress:
-        enabled: true
-        ingressClassName: cloudflare-tunnel
-        hosts:
-        - prometheus.hbang-k8s.com
+      prometheus:
+        ingress:
+          enabled: true
+          ingressClassName: cloudflare-tunnel
+          hosts:
+          - prometheus.hbang-k8s.com
       grafana:
         ingress:
           enabled: true
