@@ -1,5 +1,5 @@
 
-namespace: hbang-argocd
+namespace: argocd
 
 apps:
   argocd:
@@ -7,7 +7,7 @@ apps:
     targetRevision: 8.2.7
     name: argocd
     chart: argo-cd
-    namespace: hbang-argocd
+    namespace: argocd
     repoURL: https://argoproj.github.io/argo-helm
     values:
       namespaceOverride: argocd
