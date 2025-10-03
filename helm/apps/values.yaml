@@ -149,6 +149,8 @@ apps:
     type: helm
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
+    name: prometheus-stack
+    namespace: prometheus
     values:
       ingress:
         enabled: true
