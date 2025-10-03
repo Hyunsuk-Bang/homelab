@@ -152,6 +152,8 @@ apps:
     targetRevision: 77.12.0
     name: prometheus-stack
     namespace: prometheus
+    syncOptions:
+    - ServerSideApply=true
     values:
       ingress:
         enabled: true
