@@ -79,13 +79,17 @@ apps:
       replicaCount: 3
 
   cilium:
-    enabled: false
-    targetRevision: 1.18.0
+    enabled: true
+    targetRevision: 1.18.2
     name: cilium
     chart: cilium
     namespace: kube-system
     repoURL: https://helm.cilium.io
-    values: {}
+    values:
+      kubeProxyReplacement: true
+      ingressController:
+        enabled: true
+        default: true
 
   dex:
     enabled: false
