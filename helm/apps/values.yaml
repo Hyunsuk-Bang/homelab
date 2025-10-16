@@ -87,6 +87,8 @@ apps:
     repoURL: https://helm.cilium.io
     values:
       kubeProxyReplacement: true
+      l2announcements:
+        enabled: true
       ingressController:
         enabled: true
         default: true
