@@ -165,8 +165,13 @@ apps:
     chart: openebs
     name: openebs
     namespace: openebs
-    targetRevision: 4.3.2
+    targetRevision: 4.3.3
     values:
+      preUpgradeHook:
+        image:
+          registry: docker.io
+          repo: openebs/kubectl
+          tag: 1.32.4
       engines:
         local:
           lvm:
