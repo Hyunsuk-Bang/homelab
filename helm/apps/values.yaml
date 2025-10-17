@@ -15,8 +15,6 @@ apps:
         enabled: true
       controller:
         replicas: 1
-      server:
-        replicas: 2
       repoServer:
         replicas: 2
       applicationSet:
@@ -27,6 +25,7 @@ apps:
         params:
           server.insecure: true
       server:
+        replicas: 2
         ingress:
           enabled: true
           ingressClassName: cloudflare-tunnel
@@ -158,6 +157,23 @@ apps:
         volumeBindingMode: Immediate
         mountOptions:
         - nfsvers=4.1
+
+  openebs:
+    enabled: true
+    type: helm
+    repoURL: https://openebs.github.io/openebs
+    chart: openebs
+    targetRevision: 4.3.2
+    values:
+      engines:
+        local:
+          lvm:
+            enabled: true
+          zfs:
+            enabled: false
+        replicated:
+          mayastor:
+            enabled: false
 
   prometheusStack:
     enabled: true
