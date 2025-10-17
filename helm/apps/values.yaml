@@ -163,6 +163,8 @@ apps:
     type: helm
     repoURL: https://openebs.github.io/openebs
     chart: openebs
+    name: openebs
+    namespace: openebs
     targetRevision: 4.3.2
     values:
       engines:
