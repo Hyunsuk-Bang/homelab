@@ -175,12 +175,15 @@ apps:
       engines:
         local:
           lvm:
-            enabled: true
+            enabled: false
           zfs:
             enabled: false
         replicated:
           mayastor:
             enabled: false
+        localpv-provisioner:
+          localpv:
+            basePath: "/opt/openebs/local"
 
   prometheusStack:
     enabled: true
