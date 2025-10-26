@@ -85,6 +85,8 @@ apps:
     namespace: kube-system
     repoURL: https://helm.cilium.io
     values:
+      ipv6:
+        enabled: true
       kubeProxyReplacement: true
       l2announcements:
         enabled: true
