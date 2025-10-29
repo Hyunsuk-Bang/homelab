@@ -1,0 +1,8 @@
+---
+- name: Hello World Playbook
+  hosts: all
+  become: true
+  tasks:
+    - name: Print Hello World
+      debug:
+        msg: "Hello, world from {{ inventory_hostname }}!"

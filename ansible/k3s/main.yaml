@@ -1,0 +1,109 @@
+---
+- name: Bootstrap first K3s control-plane node (cluster init)
+  hosts: servers[0]
+  become: true
+  vars:
+    k3s_token: "SECRET"
+  tasks:
+    - name: Check if K3s is already installed
+      stat:
+        path: /usr/local/bin/k3s
+      register: k3s_installed
+
+    - name: Install initial K3s control-plane node
+      when: not k3s_installed.stat.exists
+      shell: |
+        curl -sfL https://get.k3s.io | \
+        K3S_TOKEN={{ k3s_token }} sh -s - \
+          --flannel-backend=none \
+          --disable-kube-proxy \
+          --disable servicelb \
+          --disable-network-policy \
+          --disable traefik \
+          --cluster-init
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Move kubeconfig to ~/.kube/config
+      shell: |
+        mkdir -p ~/.kube
+        cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+        chown $(id -u):$(id -g) ~/.kube/config
+        chmod 600 ~/.kube/config
+      args:
+        creates: ~/.kube/config
+      when: not k3s_installed.stat.exists
+
+    - name: Register first control-plane IP
+      when: not k3s_installed.stat.exists
+      set_fact:
+        controlplane_ip: "{{ ansible_host }}"
+
+    - name: Share control-plane IP to all nodes
+      add_host:
+        name: "primary"
+        ansible_host: "{{ ansible_host }}"
+        controlplane_ip: "{{ ansible_host }}"
+
+- name: Bootstrap additional K3s control-plane nodes
+  hosts: servers[1:]
+  become: true
+  vars:
+    k3s_token: "SECRET"
+  tasks:
+    - name: Check if K3s is already installed
+      stat:
+        path: /usr/local/bin/k3s
+      register: k3s_installed
+
+    - name: Wait for primary node fact to propagate
+      wait_for:
+        timeout: 10
+
+    - name: Get first control-plane IP
+      set_fact:
+        controlplane_ip: "{{ hostvars['primary']['controlplane_ip'] | default(groups['servers'][0]) }}"
+
+    - name: Install joining K3s control-plane node
+      shell: |
+        curl -sfL https://get.k3s.io | \
+        K3S_TOKEN={{ k3s_token }} sh -s - \
+          --flannel-backend=none \
+          --disable-kube-proxy \
+          --disable servicelb \
+          --disable-network-policy \
+          --disable traefik \
+          --server https://{{ controlplane_ip }}:6443
+      args:
+        creates: /usr/local/bin/k3s
+
+- name: Install Cilium on first control-plane node
+  hosts: servers[0]
+  become: true
+  vars:
+    api_server_ip: "{{ ansible_host }}"
+    api_server_port: 6443
+  tasks:
+    - name: Check if Cilium is already installed
+      shell: "kubectl get pods -n kube-system -l k8s-app=cilium --no-headers 2>/dev/null | wc -l"
+      register: cilium_check
+      changed_when: false
+
+    - name: Install Cilium CLI (if not installed)
+      shell: |
+        if ! command -v cilium >/dev/null 2>&1; then
+          curl -L --remote-name-all https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz
+          tar xzvf cilium-linux-amd64.tar.gz
+          mv cilium /usr/local/bin/
+        fi
+
+    - name: Install Cilium CNI
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      shell: |
+        cilium install \
+          --set k8sServiceHost={{ api_server_ip }} \
+          --set k8sServicePort={{ api_server_port }} \
+          --set kubeProxyReplacement=true \
+          --set=ipam.operator.clusterPoolIPv4PodCIDRList="10.42.0.0/16"
+      when: cilium_check.stdout | int == 0

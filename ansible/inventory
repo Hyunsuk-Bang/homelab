@@ -1,0 +1,9 @@
+[servers]
+zerg ansible_host=192.168.0.12
+terran ansible_host=192.168.0.11
+protos ansible_host=192.168.0.10
+
+[all:vars]
+ansible_user=hbang
+ansible_ssh_private_key_file=/Users/hyunsuk/.ssh/ansible
+ansible_become=true

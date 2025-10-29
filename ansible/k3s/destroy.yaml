@@ -1,0 +1,24 @@
+- name: Destroy K3s cluster
+  hosts: servers
+  become: true
+  tasks:
+    - name: Stop K3s service if running
+      shell: |
+        systemctl stop k3s || true
+        systemctl stop k3s-agent || true
+      ignore_errors: true
+
+    - name: Disable K3s service
+      shell: |
+        systemctl disable k3s || true
+        systemctl disable k3s-agent || true
+      ignore_errors: true
+
+    - name: Run K3s uninstall script (if present)
+      shell: |
+        if [ -x /usr/local/bin/k3s-uninstall.sh ]; then
+          /usr/local/bin/k3s-uninstall.sh
+        elif [ -x /usr/local/bin/k3s-agent-uninstall.sh ]; then
+          /usr/local/bin/k3s-agent-uninstall.sh
+        fi
+      ignore_errors: true
