@@ -85,14 +85,16 @@ apps:
     namespace: kube-system
     repoURL: https://helm.cilium.io
     values:
+      bpf:
+        masquerade: true
       ipv6:
-        enabled: true
+        enabled: false
       kubeProxyReplacement: true
       l2announcements:
         enabled: true
       ingressController:
-        enabled: true
-        default: true
+        enabled: false
+        default: false
 
   dex:
     enabled: false
