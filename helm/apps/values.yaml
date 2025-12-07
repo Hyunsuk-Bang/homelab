@@ -33,7 +33,7 @@ apps:
               id: github
               name: GitHub
               config:
-                clientID: Ov23liFJF3DuKVoK6xpo
+                clientID: $argocd-oauth:dex.github.clientID
                 clientSecret: $argocd-oauth:dex.github.clientSecret
       server:
         replicas: 2
