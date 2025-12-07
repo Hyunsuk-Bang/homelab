@@ -1,6 +1,5 @@
-secretStores:
+clusterSecretStores:
 - name: hbang-homelab-secrets
-  namespace: hbang-resources
   provider:
     infisical:
       hostAPI: https://app.infisical.com
@@ -21,11 +20,13 @@ secretStores:
         recursive: false
         expandSecretReferences: false
 
+secretStores: []
+
 externalSecrets:
 - name: infisical-managed-secrets
   namespace: hbang-resources
   secretStoreRef:
-    kind: SecretStore
+    kind: ClusterSecretStore
     name: hbang-homelab-secrets
   target:
     name: cloudflare-external-secret
@@ -40,9 +41,9 @@ externalSecrets:
     remoteRef:
       key: cloudflareTunnelName
 - name: argocd-oauth
-  namespace: hbang-resources
+  namespace: argocd
   secretStoreRef:
-    kind: SecretStore
+    kind: ClusterSecretStore
     name: hbang-homelab-secrets
   target:
     name: argocd-oauth
@@ -50,11 +51,6 @@ externalSecrets:
       metadata:
         labels:
           app.kubernetes.io/part-of: "argocd"
-        annotations:
-          reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "argocd"
-          reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
-          reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "argocd"
   data:
   - secretKey: dex.github.clientSecret
     remoteRef:
