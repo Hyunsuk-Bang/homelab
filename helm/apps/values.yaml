@@ -30,7 +30,7 @@ apps:
           rbac:
             policy.default: role:readonly
             policy.csv: |
-              g, banghsk99@gmail.com, role:admin
+              g, hbang-homelab:hbang-argocd, role:admin
           dex.config: |
             connectors:
             - type: github
@@ -39,6 +39,8 @@ apps:
               config:
                 clientID: $argocd-oauth:dex.github.clientID
                 clientSecret: $argocd-oauth:dex.github.clientSecret
+              orgs:
+              - name: hbang-homelab
       server:
         replicas: 2
         ingress:
