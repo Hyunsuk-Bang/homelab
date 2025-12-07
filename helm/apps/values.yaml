@@ -35,8 +35,10 @@ apps:
               config:
                 clientID: $argocd-oauth:dex.github.clientID
                 clientSecret: $argocd-oauth:dex.github.clientSecret
-              orgs:
-              - name: hbang-homelab
+                orgs:
+                - name: hbang-homelab
+                  teams:
+                  - hbang-argocd
         rbac:
           policy.csv: |
             g, hbang-homelab:hbang-argocd, role:admin
