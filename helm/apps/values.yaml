@@ -47,6 +47,14 @@ apps:
           enabled: true
           ingressClassName: cloudflare-tunnel
 
+  bpfSimulator:
+    enabled: true
+    targetRevision: 0.1.*
+    repoURL: https://gitlab.com/hbang3/bpf_simulator.git
+    name: bpf-simulator
+    path: k8s/helm-chart
+    values: {}
+
   certManager:
     enabled: true
     targetRevision: 1.18.2
