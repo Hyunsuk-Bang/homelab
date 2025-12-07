@@ -20,27 +20,6 @@ secretStores:
         secretsPath: /homelab
         recursive: false
         expandSecretReferences: false
-- name: ejbca-postgres
-  namespace: hbang-resources
-  provider:
-    infisical:
-      hostAPI: https://app.infisical.com
-      auth:
-        universalAuthCredentials:
-          clientId:
-            key: clientId
-            namespace: hbang-resources
-            name: universal-auth-credentials
-          clientSecret:
-            key: clientSecret
-            namespace: hbang-resources
-            name: universal-auth-credentials
-      secretsScope:
-        projectSlug: hbang-homeloab-secrets-d-tl-n
-        environmentSlug: dev
-        secretsPath: /homelab/ejbca
-        recursive: false
-        expandSecretReferences: false
 
 externalSecrets:
 - name: infisical-managed-secrets
@@ -60,27 +39,21 @@ externalSecrets:
   - secretKey: cloudflareTunnelName
     remoteRef:
       key: cloudflareTunnelName
-- name: ejbca-postgres
+- name: argocd-oauth
   namespace: hbang-resources
   secretStoreRef:
     kind: SecretStore
-    name: ejbca-postgres
+    name: hbang-homelab-secrets
   target:
-    name: ejbca-postgres
+    name: argocd-oauth
     template:
       metadata:
         annotations:
           reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "hbang-ejbca"
+          reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "argocd"
           reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
-          reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "hbang-ejbca"
+          reflector.v1.k8s.emberstack.com/reflection-auto-namespaces: "argocd"
   data:
-  - secretKey: postgres-admin-password
+  - secretKey: dex.github.clientSecret
     remoteRef:
-      key: postgres-admin-password
-  - secretKey: postgres-user-password
-    remoteRef:
-      key: postgres-user-password
-  - secretKey: postgres-replication-password
-    remoteRef:
-      key: postgres-replication-password
+      key: dex.github.clientSecret
