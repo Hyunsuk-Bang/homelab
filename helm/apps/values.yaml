@@ -3,7 +3,7 @@ namespace: argocd
 
 apps:
   argocd:
-    enabled: false
+    enabled: true
     targetRevision: 8.2.7
     name: argocd
     chart: argo-cd
