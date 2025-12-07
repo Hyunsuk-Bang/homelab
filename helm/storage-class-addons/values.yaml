@@ -1,0 +1,9 @@
+storageClasses:
+- name: openebs-lvmpv
+  provisioner: local.csi.openebs.io
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  parameters:
+    storage: lvm
+    volgroup: VG01

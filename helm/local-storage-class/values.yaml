@@ -1,3 +1,0 @@
-storageClass:
-  name: local-storage
-  volumeBindingMode: WaitForFirstConsumer

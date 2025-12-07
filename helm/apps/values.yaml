@@ -214,6 +214,15 @@ apps:
     targetRevision: master
     namespace:  hbang-resources
 
+  storageClassAddons:
+    enabled: true
+    type: helm
+    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
+    name: storage-class-addons
+    path: helm/storage-class-addons
+    targetRevision: master
+    namespace: hbang-resources
+
   vault:
     enabled: false
     type: helm
