@@ -27,10 +27,6 @@ apps:
         params:
           server.insecure: true
         cm:
-          rbac:
-            policy.default: role:readonly
-            policy.csv: |
-              g, hbang-homelab:hbang-argocd, role:admin
           dex.config: |
             connectors:
             - type: github
@@ -41,6 +37,10 @@ apps:
                 clientSecret: $argocd-oauth:dex.github.clientSecret
               orgs:
               - name: hbang-homelab
+        rbac:
+          policy.default: role:readonly
+          policy.csv: |
+            g, hbang-homelab:hbang-argocd, role:admin
       server:
         replicas: 2
         ingress:
