@@ -49,10 +49,11 @@ apps:
 
   bpfSimulator:
     enabled: true
-    targetRevision: 0.1.*
+    targetRevision: 0.1.0
     repoURL: https://gitlab.com/hbang3/bpf_simulator.git
-    name: bpf-simulator
     path: k8s/helm-chart
+    name: bpf-simulator
+    namespace: bpf-simulator
     values: {}
 
   certManager:
