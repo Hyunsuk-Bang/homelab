@@ -38,7 +38,6 @@ apps:
               orgs:
               - name: hbang-homelab
         rbac:
-          policy.default: role:readonly
           policy.csv: |
             g, hbang-homelab:hbang-argocd, role:admin
       server:
