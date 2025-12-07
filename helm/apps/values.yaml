@@ -26,14 +26,15 @@ apps:
       configs:
         params:
           server.insecure: true
-        dex.config: |
-          connectors:
-          - type: github
-            id: github
-            name: GitHub
-            config:
-              clientID: Ov23liFJF3DuKVoK6xpo
-              clientSecret: $argocd-oauth:dex.github.clientSecret
+        cm:
+          dex.config: |
+            connectors:
+            - type: github
+              id: github
+              name: GitHub
+              config:
+                clientID: Ov23liFJF3DuKVoK6xpo
+                clientSecret: $argocd-oauth:dex.github.clientSecret
       server:
         replicas: 2
         ingress:
