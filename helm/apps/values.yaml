@@ -50,7 +50,7 @@ apps:
   bpfSimulator:
     enabled: true
     type: helm
-    targetRevision: 0.1.*
+    targetRevision: master
     repoURL: https://gitlab.com/hbang3/bpf_simulator.git
     path: k8s/helm-chart
     name: bpf-simulator
