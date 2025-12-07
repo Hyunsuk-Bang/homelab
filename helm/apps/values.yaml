@@ -157,29 +157,14 @@ apps:
   openebs:
     enabled: true
     type: helm
-    repoURL: https://openebs.github.io/openebs
-    chart: openebs
-    name: openebs
+    repoURL: https://openebs.github.io/lvm-localpv
+    chart: openebs-lvmlocalpv
+    name: openebs-lvmlocalpv
     namespace: openebs
-    targetRevision: 4.3.3
+    targetRevision: 1.8.0
     values:
-      preUpgradeHook:
-        image:
-          registry: docker.io
-          repo: openebs/kubectl
-          tag: 1.32.4
-      engines:
-        local:
-          lvm:
-            enabled: false
-          zfs:
-            enabled: false
-        replicated:
-          mayastor:
-            enabled: false
-        localpv-provisioner:
-          localpv:
-            basePath: "/opt/openebs/local"
+      serviceMonitor:
+        enabled: true
 
   prometheusStack:
     enabled: true
@@ -203,7 +188,6 @@ apps:
           enabled: true
           hosts:
           - monitoring.hbang-k8s.com
-
 
   postgresOperator:
     enabled: false
