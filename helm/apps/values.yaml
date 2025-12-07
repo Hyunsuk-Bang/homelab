@@ -17,10 +17,6 @@ apps:
         replicas: 1
       dex:
         enabled: true
-      rbac:
-        policy.default: role:readonly
-        policy.csv: |
-          g, banghsk99@gmail.com, role:admin
       redis-ha:
         enabled: true
       repoServer:
@@ -31,6 +27,10 @@ apps:
         params:
           server.insecure: true
         cm:
+          rbac:
+            policy.default: role:readonly
+            policy.csv: |
+              g, banghsk99@gmail.com, role:admin
           dex.config: |
             connectors:
             - type: github
