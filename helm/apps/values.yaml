@@ -158,7 +158,7 @@ apps:
     enabled: true
     type: helm
     repoURL: https://openebs.github.io/lvm-localpv
-    chart: openebs-lvmlocalpv
+    chart: lvm-localpv
     name: openebs-lvmlocalpv
     namespace: openebs
     targetRevision: 1.8.0
