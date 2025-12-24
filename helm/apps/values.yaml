@@ -60,7 +60,7 @@ apps:
     values:
       crds:
         full: true
-      namespaceOverride: argo-workflow
+      namespaceOverride: argocd
       server:
         enabled: true
         replicas: 2
