@@ -93,6 +93,10 @@ apps:
             name: argo-workflows-sso
             key: client-secret
           redirectUrl: https://argo-workflows.hbang-k8s.com/oauth2/callback
+          scopes:
+           - groups
+          rbac:
+            enabled: true
 
   bpfSimulator:
     enabled: true
