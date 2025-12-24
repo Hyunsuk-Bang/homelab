@@ -70,7 +70,20 @@ apps:
           hosts:
           - argo-workflow.hbang-k8s.com
         sso:
-          enabled: false
+          enabled: true
+          issuer: https://argocd.hbang-k8s.com/api/dex
+          clientId:
+            name: argocd-oauth
+            key: dex.github.clientID
+          clientSecret:
+            name: argocd-oauth
+            key: dex.github.clientSecret
+          redirectUrl: https://argo-workflow.hbang-k8s.com/oauth2/callback
+          rbac:
+            enabled: false
+          scopes:
+          - groups
+          - email
 
   bpfSimulator:
     enabled: true
