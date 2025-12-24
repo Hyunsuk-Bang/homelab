@@ -96,7 +96,7 @@ apps:
           scopes:
            - groups
           rbac:
-            enabled: true
+            enabled: false
 
   bpfSimulator:
     enabled: true
