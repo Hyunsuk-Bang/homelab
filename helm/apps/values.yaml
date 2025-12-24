@@ -17,6 +17,12 @@ apps:
         replicas: 1
       dex:
         enabled: true
+        env:
+        - name: ARGO_WORKFLOWS_SSO_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: argo-workflows-sso
+              key: client-secret
       redis-ha:
         enabled: true
       repoServer:
@@ -28,6 +34,12 @@ apps:
           server.insecure: true
         cm:
           dex.config: |
+            staticClients:
+            - id: argo-workflows-sso
+              name: Argo Workflow
+              redirectURIs:
+              - https://argo-workflows.hbang-k8s.com/oauth2/callback
+              secretEnv: ARGO_WORKFLOWS_SSO_CLIENT_SECRET
             connectors:
             - type: github
               id: github
@@ -63,6 +75,8 @@ apps:
       namespaceOverride: argocd
       server:
         enabled: true
+        authModes:
+        - sso
         replicas: 2
         ingress:
           enabled: true
@@ -73,17 +87,12 @@ apps:
           enabled: true
           issuer: https://argocd.hbang-k8s.com/api/dex
           clientId:
-            name: argocd-oauth
-            key: dex.github.clientID
+            name: argo-workflow-sso
+            key: client-id
           clientSecret:
-            name: argocd-oauth
-            key: dex.github.clientSecret
+            name: argo-workflow-sso
+            key: client-secret
           redirectUrl: https://argo-workflow.hbang-k8s.com/oauth2/callback
-          rbac:
-            enabled: false
-          scopes:
-          - groups
-          - email
 
   bpfSimulator:
     enabled: true

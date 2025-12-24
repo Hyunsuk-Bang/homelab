@@ -26,7 +26,7 @@ externalSecrets:
 - name: infisical-managed-secrets
   namespace: hbang-resources
   secretStoreRef:
-    kind: ClusterSecretStore
+    kind: SecretStore
     name: hbang-homelab-secrets
   target:
     name: cloudflare-external-secret
@@ -58,3 +58,17 @@ externalSecrets:
   - secretKey: dex.github.clientID
     remoteRef:
       key: dex.github.clientID
+- name: argo-workflow-sso
+  namespace: argocd
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: hbang-homelab-secrets
+  target:
+    name: argo-workflow-sso
+  data:
+  - secretKey: client-id
+    remoteRef:
+      key: argo-workflow-client-id
+  - secretKey: client-secret
+    remoteRef:
+      key: argo-workflow-client-secret
