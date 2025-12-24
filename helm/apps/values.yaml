@@ -61,13 +61,16 @@ apps:
       crds:
         full: true
       namespaceOverride: argo-workflow
-      ingress:
+      server:
         enabled: true
-        ingressClassName: cloudflare-tunnel
-        hosts:
-        - argo-workflow.hbang-k8s.com
-      sso:
-        enabled: false
+        replicas: 2
+        ingress:
+          enabled: true
+          ingressClassName: cloudflare-tunnel
+          hosts:
+          - argo-workflow.hbang-k8s.com
+        sso:
+          enabled: false
 
   bpfSimulator:
     enabled: true
