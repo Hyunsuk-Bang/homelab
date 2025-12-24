@@ -35,7 +35,7 @@ apps:
         cm:
           dex.config: |
             staticClients:
-            - id: argo-workflows-sso
+            - id: argo-workflow-sso
               name: Argo Workflow
               redirectURIs:
               - https://argo-workflows.hbang-k8s.com/oauth2/callback
