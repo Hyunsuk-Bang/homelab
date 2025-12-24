@@ -48,6 +48,25 @@ apps:
           enabled: true
           ingressClassName: cloudflare-tunnel
 
+  argoWorkflows:
+    enabled: true
+    targetRevision: v3.7.6
+    name: argo-workflows
+    chart: argo-workflows
+    namespace: argocd
+    repoURL: https://argoproj.github.io/argo-helm
+    values:
+      crds:
+        full: true
+      namespaceOverride: argo-workflow
+      ingress:
+        enabled: true
+        ingressClassName: cloudflare-tunnel
+        hosts:
+        - argo-workflow.hbang-k8s.com
+      sso:
+        enabled: false
+
   bpfSimulator:
     enabled: true
     type: helm
