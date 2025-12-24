@@ -26,7 +26,7 @@ externalSecrets:
 - name: infisical-managed-secrets
   namespace: hbang-resources
   secretStoreRef:
-    kind: SecretStore
+    kind: ClusterSecretStore
     name: hbang-homelab-secrets
   target:
     name: cloudflare-external-secret
