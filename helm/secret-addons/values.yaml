@@ -58,13 +58,13 @@ externalSecrets:
   - secretKey: dex.github.clientID
     remoteRef:
       key: dex.github.clientID
-- name: argo-workflow-sso
+- name: argo-workflows-sso
   namespace: argocd
   secretStoreRef:
     kind: ClusterSecretStore
     name: hbang-homelab-secrets
   target:
-    name: argo-workflow-sso
+    name: argo-workflows-sso
   data:
   - secretKey: client-id
     remoteRef:

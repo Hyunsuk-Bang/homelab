@@ -35,7 +35,7 @@ apps:
         cm:
           dex.config: |
             staticClients:
-            - id: argo-workflow-sso
+            - id: argo-workflows-sso
               name: Argo Workflow
               redirectURIs:
               - https://argo-workflows.hbang-k8s.com/oauth2/callback
@@ -82,17 +82,17 @@ apps:
           enabled: true
           ingressClassName: cloudflare-tunnel
           hosts:
-          - argo-workflow.hbang-k8s.com
+          - argo-workflows.hbang-k8s.com
         sso:
           enabled: true
           issuer: https://argocd.hbang-k8s.com/api/dex
           clientId:
-            name: argo-workflow-sso
+            name: argo-workflows-sso
             key: client-id
           clientSecret:
-            name: argo-workflow-sso
+            name: argo-workflows-sso
             key: client-secret
-          redirectUrl: https://argo-workflow.hbang-k8s.com/oauth2/callback
+          redirectUrl: https://argo-workflows.hbang-k8s.com/oauth2/callback
 
   bpfSimulator:
     enabled: true
