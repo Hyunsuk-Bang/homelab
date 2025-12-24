@@ -50,11 +50,13 @@ apps:
 
   argoWorkflows:
     enabled: true
-    targetRevision: v3.7.6
+    targetRevision: 0.46.2
     name: argo-workflows
     chart: argo-workflows
     namespace: argocd
     repoURL: https://argoproj.github.io/argo-helm
+    syncOptions:
+    - ServerSideApply=true
     values:
       crds:
         full: true
