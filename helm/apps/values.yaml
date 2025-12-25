@@ -73,6 +73,9 @@ apps:
       crds:
         full: true
       namespaceOverride: argocd
+      workflow:
+        serviceAccount:
+          create: true
       server:
         enabled: true
         authModes:
