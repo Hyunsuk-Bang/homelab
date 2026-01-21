@@ -101,6 +101,17 @@ apps:
           rbac:
             enabled: false
 
+  apiGatewayCRDs:
+    enabled: true
+    type: helm
+    targetRevision: main
+    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
+    path: api-gateway-crds
+    name: api-gateway-crds
+    syncOptions:
+    - ServerSideApply=true
+    values: {}
+
   bpfSimulator:
     enabled: true
     type: helm
