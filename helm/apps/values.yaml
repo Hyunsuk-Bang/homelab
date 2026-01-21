@@ -104,7 +104,7 @@ apps:
   apiGatewayCRDs:
     enabled: true
     type: helm
-    targetRevision: main
+    targetRevision: master
     repoURL: https://github.com/Hyunsuk-Bang/homelab.git
     path: helm/api-gateway-crds
     name: api-gateway-crds
