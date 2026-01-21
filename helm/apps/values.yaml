@@ -106,7 +106,7 @@ apps:
     type: helm
     targetRevision: main
     repoURL: https://github.com/Hyunsuk-Bang/homelab.git
-    path: api-gateway-crds
+    path: helm/api-gateway-crds
     name: api-gateway-crds
     syncOptions:
     - ServerSideApply=true
