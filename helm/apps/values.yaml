@@ -215,6 +215,57 @@ apps:
       webhook:
         replicaCount: 2
 
+  externalCoreDns:
+    enabled: true
+    type: helm
+    repoURL: https://coredns.github.io/helm
+    chart: coredns
+    targetRevision: 1.43.0
+    name: external-coredns
+    namespace: hbang-resources
+    values:
+      replicaCount: 2
+      isClusterService: false
+      serviceType: NodePort
+      servers:
+      - zones:
+        - zone: .
+          use_tcp: true
+        port: 53
+        nodePort: 30053
+        plugins:
+        - name: errors
+        - name: health
+          configBlock: |-
+            lameduck 10s
+        - name: ready
+        - name: hosts
+          parameters: /etc/coredns/youtube-blocklist
+          configBlock: |-
+            fallthrough
+        - name: forward
+          parameters: . 1.1.1.1 8.8.8.8
+        - name: cache
+          parameters: 30
+        - name: loop
+        - name: reload
+        - name: loadbalance
+      zoneFiles:
+      - filename: youtube-blocklist
+        contents: |
+          0.0.0.0 youtube.com
+          0.0.0.0 www.youtube.com
+          0.0.0.0 m.youtube.com
+          0.0.0.0 youtu.be
+          0.0.0.0 youtube-nocookie.com
+          0.0.0.0 www.youtube-nocookie.com
+          0.0.0.0 youtubei.googleapis.com
+          0.0.0.0 yt3.ggpht.com
+          0.0.0.0 ytimg.com
+          0.0.0.0 i.ytimg.com
+          0.0.0.0 s.ytimg.com
+          0.0.0.0 i9.ytimg.com
+
   localStorageClass:
     enabled: false
     type: helm
@@ -346,3 +397,4 @@ apps:
     name: reflector
     namespace: hbang-resources
     values: {}
+
