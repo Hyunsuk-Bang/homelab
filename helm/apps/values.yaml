@@ -176,9 +176,6 @@ apps:
       kubeProxyReplacement: true
       l2announcements:
         enabled: true
-      ingressController:
-        enabled: false
-        default: false
 
   dex:
     enabled: false
@@ -226,7 +223,7 @@ apps:
     values:
       replicaCount: 2
       isClusterService: false
-      serviceType: NodePort
+      serviceType: LoadBalancer
       servers:
       - zones:
         - zone: .
