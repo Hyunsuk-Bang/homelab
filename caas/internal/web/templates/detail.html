@@ -1,0 +1,84 @@
+{{define "detail.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Cluster.Name}} &mdash; caas</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; background: #0f1419; color: #e6e6e6; }
+  header { padding: 16px 24px; background: #15202b; border-bottom: 1px solid #2a3744; }
+  header h1 { margin: 0; font-size: 18px; }
+  main { padding: 24px; max-width: 900px; margin: 0 auto; }
+  h2 { font-size: 14px; color: #9ab; margin: 22px 0 8px; border-bottom: 1px solid #2a3744; padding-bottom: 4px; }
+  a { color: #6cb6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { text-align: left; padding: 6px 10px; border-bottom: 1px solid #1f2933; vertical-align: top; }
+  th { color: #8aa; width: 200px; font-weight: 600; }
+  code { background: #1c2531; padding: 1px 6px; border-radius: 4px; }
+  .pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .Ready, .True { background: #14391f; color: #6ee787; }
+  .Provisioning, .Allocating, .Deleting { background: #3a2f12; color: #f0c674; }
+  .Failed, .Pending, .False { background: #3a1414; color: #ff8a8a; }
+  .muted { color: #678; }
+  .btn { display: inline-block; background: #1f6feb; color: #fff; border-radius: 5px; padding: 6px 12px; font-size: 13px; }
+  .btn.danger { background: #b62324; border: 0; cursor: pointer; }
+</style>
+</head>
+<body>
+<header><h1><a href="/">&larr;</a> &nbsp; {{.Cluster.Name}}
+  <span class="pill {{.Cluster.Status.Phase}}">{{if .Cluster.Status.Phase}}{{.Cluster.Status.Phase}}{{else}}-{{end}}</span></h1></header>
+<main>
+  {{with .Cluster}}
+  <h2>Networking</h2>
+  <table>
+    <tr><th>Namespace</th><td><code>{{if .Status.Namespace}}{{.Status.Namespace}}{{else}}-{{end}}</code></td></tr>
+    <tr><th>VLAN</th><td>{{if .Status.Allocation.VLAN}}{{.Status.Allocation.VLAN}}{{else}}<span class="muted">not allocated</span>{{end}}</td></tr>
+    <tr><th>Node subnet</th><td><code>{{.Status.Allocation.NodeSubnet}}</code></td></tr>
+    <tr><th>Gateway</th><td><code>{{.Status.Allocation.Gateway}}</code> <span class="muted">(SVI on the switch)</span></td></tr>
+    <tr><th>Host range</th><td><code>{{.Status.Allocation.HostRange}}</code></td></tr>
+    <tr><th>Pod / Service CIDR</th><td><code>{{.Status.Allocation.PodCIDR}}</code> / <code>{{.Status.Allocation.ServiceCIDR}}</code></td></tr>
+    <tr><th>Control-plane endpoint</th><td><code>{{if .Status.ControlPlaneEndpoint}}{{.Status.ControlPlaneEndpoint}}{{else}}-{{end}}</code></td></tr>
+  </table>
+
+  <h2>Workers</h2>
+  <table>
+    <tr><th>Ready / desired</th><td>{{.Status.ObservedWorkers.Ready}} / {{.Status.ObservedWorkers.Desired}}</td></tr>
+    {{range .Spec.Workers}}<tr><th>{{.Name}}</th><td>node <code>{{.SourceNode}}</code>, template {{.TemplateID}}, replicas {{.Replicas}}, {{.Cores}}c / {{.MemoryMiB}}MiB / {{.DiskGiB}}GiB</td></tr>{{end}}
+  </table>
+
+  <h2>Conditions</h2>
+  <table>
+    {{range .Status.Conditions}}
+    <tr><th>{{.Type}}</th><td><span class="pill {{.Status}}">{{.Status}}</span> <span class="muted">{{.Reason}}{{if .Message}} &mdash; {{.Message}}{{end}}</span></td></tr>
+    {{end}}
+  </table>
+  {{end}}
+
+  <h2>Actions</h2>
+  {{if uiManaged .Cluster}}
+  <p>
+    <form style="display:inline" method="post" action="/clusters/{{.Cluster.Namespace}}/{{.Cluster.Name}}/scale">
+      <label style="color:#9ab;font-size:13px">Workers
+        <input name="workers" type="number" min="1" value="{{.DesiredWorkers}}" style="width:64px;background:#0f1419;color:#e6e6e6;border:1px solid #2a3744;border-radius:5px;padding:5px 6px">
+      </label>
+      <button class="btn" type="submit">Scale</button>
+    </form>
+    <span class="muted">spread across the Proxmox nodes automatically</span>
+  </p>
+  <p>
+    <a class="btn" href="/clusters/{{.Cluster.Namespace}}/{{.Cluster.Name}}/kubeconfig">Download kubeconfig</a>
+    &nbsp;
+    <form style="display:inline" method="post" action="/clusters/{{.Cluster.Namespace}}/{{.Cluster.Name}}/delete" onsubmit="return confirm('Delete {{.Cluster.Name}}? This destroys its VMs.')">
+      <button class="btn danger" type="submit">Delete cluster</button>
+    </form>
+  </p>
+  {{else}}
+  <p class="muted">This cluster is <strong>managed by GitOps</strong> &mdash; scale and delete are
+    disabled here. Change it in its source (git). The kubeconfig is still available:</p>
+  <p><a class="btn" href="/clusters/{{.Cluster.Namespace}}/{{.Cluster.Name}}/kubeconfig">Download kubeconfig</a></p>
+  {{end}}
+</main>
+</body>
+</html>{{end}}

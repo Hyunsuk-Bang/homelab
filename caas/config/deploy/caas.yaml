@@ -1,0 +1,139 @@
+# Self-contained deployment for the caas operator + web UI.
+# Prereqs:
+#   1. CRDs installed:   kubectl apply -f config/crd/bases/
+#   2. Proxmox creds:    kubectl -n caas-system create secret generic proxmox-credentials \
+#                          --from-literal=url=https://192.168.10.10:8006 \
+#                          --from-literal=tokenID='root@pam!CAPI' \
+#                          --from-literal=tokenSecret=<secret>
+#   3. Image is public on Docker Hub (banghsk99/caas) — kubelet pulls it, no import needed.
+# Then:  kubectl apply -f config/deploy/caas.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: caas-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caas
+  namespace: caas-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caas-manager
+rules:
+- apiGroups: [""]
+  resources: [secrets]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [""]
+  resources: [namespaces]
+  verbs: [create, delete, get, list, watch]
+- apiGroups: [bootstrap.cluster.x-k8s.io]
+  resources: [kubeadmconfigtemplates]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters/finalizers]
+  verbs: [update]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters/status, vlanpools/status]
+  verbs: [get, patch, update]
+- apiGroups: [caas.hbang.io]
+  resources: [vlanpools]
+  verbs: [get, list, watch]
+- apiGroups: [cluster.x-k8s.io]
+  resources: [clusters, machinedeployments]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [controlplane.cluster.x-k8s.io]
+  resources: [kamajicontrolplanes]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [infrastructure.cluster.x-k8s.io]
+  resources: [proxmoxclusters, proxmoxmachinetemplates]
+  verbs: [create, delete, get, list, patch, update, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: caas-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caas-manager
+subjects:
+- kind: ServiceAccount
+  name: caas
+  namespace: caas-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caas
+  namespace: caas-system
+  labels: {app: caas}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: caas}
+  template:
+    metadata:
+      labels: {app: caas}
+    spec:
+      serviceAccountName: caas
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: manager
+        image: banghsk99/caas:0.1.10      # public Docker Hub registry
+        imagePullPolicy: IfNotPresent
+        args:
+        - --leader-elect=false
+        - --metrics-bind-address=0
+        - --health-probe-bind-address=:8081
+        - --web-bind-address=:8090
+        - --web-namespace=default
+        - --web-node-templates=lab01=106,lab02=107,lab03=108
+        env:
+        - name: PROXMOX_URL
+          valueFrom: {secretKeyRef: {name: proxmox-credentials, key: url}}
+        - name: PROXMOX_TOKEN_ID
+          valueFrom: {secretKeyRef: {name: proxmox-credentials, key: tokenID}}
+        - name: PROXMOX_TOKEN_SECRET
+          valueFrom: {secretKeyRef: {name: proxmox-credentials, key: tokenSecret}}
+        # UniFi network provider (optional — omit the secret to fall back to noop).
+        - name: UNIFI_URL
+          valueFrom: {secretKeyRef: {name: unifi-credentials, key: url, optional: true}}
+        - name: UNIFI_API_KEY
+          valueFrom: {secretKeyRef: {name: unifi-credentials, key: apiKey, optional: true}}
+        - name: UNIFI_SITE
+          valueFrom: {secretKeyRef: {name: unifi-credentials, key: site, optional: true}}
+        ports:
+        - {name: web, containerPort: 8090}
+        - {name: health, containerPort: 8081}
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8081}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: {path: /readyz, port: 8081}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 50m, memory: 128Mi}
+          limits: {memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caas-web
+  namespace: caas-system
+spec:
+  type: NodePort
+  selector: {app: caas}
+  ports:
+  - {name: web, port: 8090, targetPort: 8090, nodePort: 30090}

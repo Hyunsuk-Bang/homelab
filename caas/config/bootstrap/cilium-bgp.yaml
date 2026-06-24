@@ -1,0 +1,71 @@
+# Cilium BGP + LoadBalancer config for the management cluster.
+# Apply AFTER Cilium is installed (config/bootstrap/cilium-values.yaml):
+#   kubectl apply -f config/bootstrap/cilium-bgp.yaml
+#
+# Purpose: advertise the Kamaji tenant control-plane LoadBalancer VIPs (172.17.0.0/16)
+# over BGP to the UniFi router, so Proxmox workers can reach their control plane.
+# >>> The UniFi side MUST have a matching BGP peer: router ASN 65100, neighbor =
+#     the k3s nodes' ASN 65200. Without this peering, tenant `kubeadm join` fails
+#     with "no route to host" to 172.17.x:6443. <<<
+---
+# The pool the Kamaji control-plane Services draw their VIPs from.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: default-bgp-ip-pool
+spec:
+  allowFirstLastIPs: "No"
+  disabled: false
+  blocks:
+  - start: 172.17.0.2
+    stop: 172.17.255.254
+---
+# Peer with the UniFi router.
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: cilium-unifi
+spec:
+  nodeSelector:
+    matchLabels: {}            # all nodes peer
+  bgpInstances:
+  - name: "65200"
+    localASN: 65200            # the k3s cluster's ASN
+    peers:
+    - name: unifi-65100
+      peerASN: 65100           # the UniFi router's ASN
+      peerAddress: 192.168.20.1
+      peerConfigRef:
+        name: peer-config
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: peer-config
+spec:
+  ebgpMultihop: 1
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 120
+  families:
+  - afi: ipv4
+    safi: unicast
+    advertisements:
+      matchLabels:
+        advertise: bgp
+---
+# Advertise LoadBalancer service IPs (selected by the advertise=bgp label above).
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: loadbalancer-services
+  labels:
+    advertise: bgp
+spec:
+  advertisements:
+  - advertisementType: Service
+    service:
+      addresses:
+      - LoadBalancerIP
+    selector:
+      matchLabels: {}

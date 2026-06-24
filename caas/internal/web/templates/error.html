@@ -1,0 +1,37 @@
+{{define "error.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Code}} {{.Title}} &mdash; caas</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; background: #0f1419; color: #e6e6e6; }
+  header { padding: 16px 24px; background: #15202b; border-bottom: 1px solid #2a3744; }
+  header h1 { margin: 0; font-size: 18px; }
+  header a { color: #6cb6ff; text-decoration: none; }
+  main { padding: 24px; max-width: 640px; margin: 0 auto; }
+  .card { background: #15202b; border: 1px solid #2a3744; border-radius: 8px; padding: 32px; text-align: center; margin-top: 48px; }
+  .code { font-size: 56px; font-weight: 700; color: #f0c674; line-height: 1; margin: 0; }
+  .title { font-size: 18px; color: #e6e6e6; margin: 12px 0 4px; }
+  .msg { font-size: 13px; color: #9ab; margin: 0 0 24px; word-break: break-word; }
+  .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; background: #1f6feb; color: #fff; border: 0; border-radius: 5px; padding: 9px 18px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .btn.secondary { background: #2a3744; color: #cde; }
+</style>
+</head>
+<body>
+<header><h1><a href="/">caas</a> <span>&mdash; tenant cluster launcher</span></h1></header>
+<main>
+  <div class="card">
+    <p class="code">{{.Code}}</p>
+    <p class="title">{{.Title}}</p>
+    <p class="msg">{{.Message}}</p>
+    <div class="actions">
+      <a class="btn" href="/">Back to clusters</a>
+      <a class="btn secondary" href="javascript:history.back()">Go back</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>{{end}}

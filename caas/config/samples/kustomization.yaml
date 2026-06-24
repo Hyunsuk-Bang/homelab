@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- caas_v1alpha1_tenantcluster.yaml
+- caas_v1alpha1_vlanpool.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

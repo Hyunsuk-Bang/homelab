@@ -1,0 +1,9 @@
+# Packages a pre-built static manager binary (built with
+#   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o manager ./cmd/main.go )
+# into a distroless image. Avoids a slow in-container Go build under arm64->amd64
+# emulation. Build with:  docker buildx build --platform linux/amd64 -f Dockerfile.prebuilt .
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+COPY manager /manager
+USER 65532:65532
+ENTRYPOINT ["/manager"]

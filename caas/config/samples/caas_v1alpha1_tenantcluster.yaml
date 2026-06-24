@@ -1,0 +1,31 @@
+apiVersion: caas.hbang.io/v1alpha1
+kind: TenantCluster
+metadata:
+  name: team-blue
+  namespace: default
+spec:
+  kubernetesVersion: v1.34.3
+  poolRef:
+    name: default
+  controlPlane:
+    replicas: 3
+  cni:
+    type: cilium          # auto-installed in Phase 2 (not yet wired)
+  workers:
+    - name: lab01
+      sourceNode: lab01
+      templateID: 106
+      replicas: 1
+      cores: 4
+      memoryMiB: 16384
+      diskGiB: 100
+    - name: lab02
+      sourceNode: lab02
+      templateID: 107
+      replicas: 1
+    - name: lab03
+      sourceNode: lab03
+      templateID: 108
+      replicas: 1
+  sshAuthorizedKeys:
+    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINq25Ui7pTHj6BA/hrxZYFpC+HQmJaubAsEXID6VA7JW ansible_key"

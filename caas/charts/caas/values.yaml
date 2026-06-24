@@ -3,15 +3,12 @@
 replicaCount: 1
 
 image:
-  repository: caas
-  tag: ""              # empty → .Chart.appVersion (0.1.5)
-  # No registry in the homelab: the image is imported into k3s containerd, so Never.
-  # Set to IfNotPresent/Always if you push the image to a registry.
-  pullPolicy: Never
+  repository: banghsk99/caas    # public Docker Hub registry
+  tag: ""              # empty → .Chart.appVersion
+  pullPolicy: IfNotPresent
 
-# Pin to the node where the image was imported (no registry). Empty {} to schedule anywhere.
-nodeSelector:
-  kubernetes.io/hostname: k3s0
+# Image is pulled from a registry now, so it can schedule anywhere.
+nodeSelector: {}
 tolerations: []
 affinity: {}
 

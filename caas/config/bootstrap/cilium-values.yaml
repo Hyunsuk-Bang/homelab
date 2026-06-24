@@ -1,0 +1,26 @@
+# Cilium Helm values for the management cluster (Cilium v1.19.1).
+# Cilium is the CNI + kube-proxy replacement + BGP LoadBalancer; k3s must be started
+# with --flannel-backend=none --disable-kube-proxy --disable servicelb
+# --disable-network-policy (see _docs/REBUILD.md).
+#
+#   helm repo add cilium https://helm.cilium.io
+#   helm install cilium cilium/cilium --version 1.19.1 -n kube-system \
+#     -f config/bootstrap/cilium-values.yaml
+#
+autoDirectNodeRoutes: true
+bgpControlPlane:
+  enabled: true
+bpf:
+  masquerade: true
+cluster:
+  name: default
+ipam:
+  operator:
+    clusterPoolIPv4PodCIDRList: 172.16.0.0/16   # management pod CIDR
+ipv4NativeRoutingCIDR: 172.16.0.0/16
+k8sServiceHost: 192.168.20.3                     # k3s0 API (kube-proxy replacement target)
+k8sServicePort: 6443
+kubeProxyReplacement: true
+operator:
+  replicas: 1
+routingMode: native

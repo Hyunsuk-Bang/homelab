@@ -178,15 +178,16 @@ apps:
         enabled: true
 
   caas:
-    # Cluster-as-a-service operator (replaces management-helm). Chart vendored at
-    # helm/caas. NOTE: image caas:0.1.10 has no registry — it must be imported into
-    # k3s containerd on k3s0 (sudo k3s ctr images import). Secrets proxmox-credentials
-    # + unifi-credentials must exist in caas-system (ideally via external-secrets).
+    # Cluster-as-a-service operator (replaces management-helm). The operator source +
+    # Helm chart live in-repo at caas/ (chart: caas/charts/caas). Image is public on
+    # Docker Hub (banghsk99/caas), pulled by kubelet — no containerd import needed.
+    # Secrets proxmox-credentials + unifi-credentials must exist in caas-system
+    # (ideally via external-secrets).
     enabled: true
     type: helm
     repoURL: https://github.com/Hyunsuk-Bang/homelab.git
     name: caas
-    path: helm/caas
+    path: caas/charts/caas
     targetRevision: master
     namespace: caas-system
     syncOptions:

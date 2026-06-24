@@ -3,7 +3,7 @@
 This chart hand-templated the Cluster API bundle (Cluster / ProxmoxCluster / KamajiControlPlane
 / MachineDeployments) for a tenant cluster from static values. That job is now done by the
 **caas operator** — the `ARCHITECTURE.md` TODO ("CIDR allocation operator … from a single
-`TenantCluster` CRD") — deployed via ArgoCD (`helm/apps` → `helm/caas`).
+`TenantCluster` CRD") — deployed via ArgoCD (`helm/apps` → `caas/charts/caas`).
 
 To create a cluster now, apply a `TenantCluster` CR (or use the caas web UI) instead of
 `helm install`-ing this chart. The operator allocates the VLAN, creates the per-cluster

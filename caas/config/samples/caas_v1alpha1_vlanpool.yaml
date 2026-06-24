@@ -1,0 +1,27 @@
+apiVersion: caas.hbang.io/v1alpha1
+kind: VLANPool
+metadata:
+  name: default
+spec:
+  # Allocatable VLAN IDs. MUST match VLANs actually provisioned in UniFi, else the
+  # operator hands out a VLAN with no gateway and the cluster dies. Starter block 30-33
+  # (4 clusters). Grow this as you create more VLANs in UniFi. First free = 30 =>
+  # node subnet 10.30.0.0/24. NOTE: the allocator auto-skips VLANs whose node subnet
+  # would overlap the pods/services CIDRs below (96 vs 10.96/16, 244 vs 10.244/16).
+  vlanRange:
+    start: 30
+    end: 33
+  # Node subnet is derived from the VLAN: <base>.<vlan>.0.0/<prefix>.
+  nodeNetwork:
+    base: 10
+    prefix: 24                     # 10.<vlan>.0.0/24 (254 IPs/cluster; matches UniFi network)
+    gatewayHostIndex: 1            # 10.<vlan>.0.1 = gateway (auto-provisioned SVI on the UniFi router)
+    hostRange:                     # worker VM IPs: 10.<vlan>.0.10 .. 10.<vlan>.0.250
+      start: 10
+      end: 250
+  pods: "10.244.0.0/16"            # reused across all tenants (VLAN isolation makes this safe)
+  services: "10.96.0.0/16"         # reused across all tenants
+  dns: ["8.8.8.8", "1.1.1.1"]
+  controlPlane:
+    bgpPool: "172.17.0.0/16"       # Cilium LB pool the Kamaji VIPs come from
+    bridge: vmbr0

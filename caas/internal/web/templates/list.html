@@ -1,0 +1,95 @@
+{{define "list.html"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>caas</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; background: #0f1419; color: #e6e6e6; }
+  header { padding: 16px 24px; background: #15202b; border-bottom: 1px solid #2a3744; }
+  header h1 { margin: 0; font-size: 18px; }
+  header span { color: #8aa; font-size: 13px; }
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  h2 { font-size: 15px; color: #9ab; margin: 24px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2a3744; }
+  th { color: #8aa; font-weight: 600; }
+  a { color: #6cb6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .Ready { background: #14391f; color: #6ee787; }
+  .Provisioning, .Allocating, .Deleting { background: #3a2f12; color: #f0c674; }
+  .Failed, .Pending { background: #3a1414; color: #ff8a8a; }
+  form.card { background: #15202b; border: 1px solid #2a3744; border-radius: 8px; padding: 16px; }
+  form.card label { display: block; font-size: 12px; color: #9ab; margin: 8px 0 2px; }
+  form.card input, form.card select { background: #0f1419; color: #e6e6e6; border: 1px solid #2a3744; border-radius: 5px; padding: 6px 8px; font-size: 13px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 160px; }
+  button { background: #1f6feb; color: #fff; border: 0; border-radius: 5px; padding: 7px 14px; font-size: 13px; cursor: pointer; margin-top: 12px; }
+  button.danger { background: #b62324; padding: 3px 9px; margin: 0; font-size: 12px; }
+  .muted { color: #678; }
+  .owner { color: #9ab; font-size: 11px; }
+  .workers fieldset { border: 1px solid #2a3744; border-radius: 6px; padding: 8px 12px; margin-top: 4px; }
+  .workers input { width: 64px; }
+  .workers select { min-width: 220px; }
+  .wtable { width: auto; }
+  .wtable th { color: #8aa; font-weight: 600; font-size: 11px; padding: 2px 10px; border: 0; }
+  .wtable td { padding: 3px 10px; border: 0; }
+</style>
+</head>
+<body>
+<header><h1>caas <span>&mdash; tenant cluster launcher</span></h1></header>
+<main>
+  <h2>Launch a cluster</h2>
+  <form class="card" method="post" action="/clusters">
+    <div class="row">
+      <div><label>Name</label><input name="name" placeholder="team-blue" required></div>
+      <div><label>Kubernetes version</label>
+        <select name="kubernetesVersion">
+          {{range .KubernetesVersions}}<option value="{{.}}">{{.}}</option>{{end}}
+        </select>
+      </div>
+      <div><label>Control-plane replicas</label><input name="cpReplicas" type="number" min="1" value="1"></div>
+    </div>
+    <div class="row">
+      <div><label>Workers</label><input name="workers" type="number" min="1" value="3"></div>
+      <div><label>Worker size</label>
+        <select name="size">
+          {{$def := .DefaultSize}}{{range .Sizes}}<option value="{{.Name}}"{{if eq .Name $def}} selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+      </div>
+    </div>
+    <button type="submit">Launch</button>
+    <span class="muted">&nbsp; namespace: {{.Namespace}}</span>
+  </form>
+
+  <h2>Clusters</h2>
+  <table>
+    <thead><tr>
+      <th>Name</th><th>Phase</th><th>Owner</th><th>VLAN</th><th>Endpoint</th><th>Workers</th>
+      <th>CP</th><th>CNI</th><th>Ready</th><th>Age</th><th></th>
+    </tr></thead>
+    <tbody>
+    {{range .Clusters}}
+      <tr>
+        <td><a href="/clusters/{{.Namespace}}/{{.Name}}">{{.Name}}</a></td>
+        <td><span class="pill {{.Status.Phase}}">{{if .Status.Phase}}{{.Status.Phase}}{{else}}-{{end}}</span></td>
+        <td><span class="owner">{{managedBy .}}</span></td>
+        <td>{{if .Status.Allocation.VLAN}}{{.Status.Allocation.VLAN}}{{else}}-{{end}}</td>
+        <td class="muted">{{if .Status.ControlPlaneEndpoint}}{{.Status.ControlPlaneEndpoint}}{{else}}-{{end}}</td>
+        <td>{{.Status.ObservedWorkers.Ready}}/{{.Status.ObservedWorkers.Desired}}</td>
+        <td>{{cond . "ControlPlaneReady"}}</td>
+        <td>{{cond . "CNIReady"}}</td>
+        <td>{{cond . "Ready"}}</td>
+        <td class="muted">{{age .CreationTimestamp}}</td>
+        <td>{{if uiManaged .}}<form method="post" action="/clusters/{{.Namespace}}/{{.Name}}/delete" onsubmit="return confirm('Delete {{.Name}}? This destroys its VMs.')"><button class="danger" type="submit">delete</button></form>{{else}}<span class="muted" title="Managed by GitOps">git</span>{{end}}</td>
+      </tr>
+    {{else}}
+      <tr><td colspan="11" class="muted">No clusters yet &mdash; launch one above.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</main>
+</body>
+</html>{{end}}

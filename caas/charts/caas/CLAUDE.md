@@ -8,8 +8,8 @@ Service, and (optionally) the Proxmox/UniFi credential Secrets.
   `config/crd/bases/` after `make manifests`.
 - `templates/` — SA, ClusterRole+Binding, Secrets (created from values unless
   `*.existingSecret` is set), Deployment, Service, NOTES.txt.
-- `values.yaml` — image, nodeSelector (defaults to `k3s0` + `pullPolicy: Never` for the
-  registry-less homelab), web config, and `proxmox` / `unifi` creds.
+- `values.yaml` — image (`banghsk99/caas` on public Docker Hub, `pullPolicy: IfNotPresent`),
+  web config, and `proxmox` / `unifi` creds. Schedules anywhere (`nodeSelector: {}`).
 
 Install (homelab, reusing existing secrets):
 ```
@@ -21,5 +21,6 @@ Or provide creds inline via `--set proxmox.url=…,proxmox.tokenID=…,proxmox.t
 (a Secret is created). Resource names match the chart fullname, so release name `caas`
 reproduces the manual `config/deploy/caas.yaml` names exactly.
 
-Note: image has no registry — it must already be imported into k3s containerd on the target
-node (`sudo k3s ctr images import caas-image.tar`), hence `pullPolicy: Never` + the nodeSelector.
+Image: `banghsk99/caas` is public on Docker Hub, so kubelet pulls it — no containerd import
+or node pinning needed. Build/push a new tag with `docker buildx build --platform linux/amd64
+-f Dockerfile.prebuilt -t banghsk99/caas:<tag> --load . && docker push banghsk99/caas:<tag>`.
