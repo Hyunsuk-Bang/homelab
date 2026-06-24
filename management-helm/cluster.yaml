@@ -1,0 +1,236 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: hbang-proxmox
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 172.19.0.0/16
+    services:
+      cidrBlocks:
+        - 172.20.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha2
+    kind: KamajiControlPlane
+    name: hbang-proxmox
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+    kind: ProxmoxCluster
+    name: hbang-proxmox
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha2
+kind: KamajiControlPlane
+metadata:
+  name: hbang-proxmox
+  namespace: default
+spec:
+  dataStoreName: default
+  addons:
+    coreDNS: {}
+    kubeProxy: {}
+  kubelet:
+    cgroupfs: systemd
+    preferredAddressTypes:
+      - InternalIP
+  network:
+    serviceType: LoadBalancer
+  deployment:
+    replicas: 2
+  version: v1.34.3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxCluster
+metadata:
+  name: hbang-proxmox
+  namespace: default
+spec:
+  dnsServers:
+    - 8.8.8.8
+    - 1.1.1.1
+  externalManagedControlPlane: true
+  ipv4Config:
+    addresses:
+      - 172.18.0.10-172.18.0.50
+    gateway: 172.18.0.1
+    prefix: 24
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: hbang-proxmox-worker-px1
+  namespace: default
+spec:
+  clusterName: hbang-proxmox
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          kind: KubeadmConfigTemplate
+          name: hbang-proxmox-worker
+      clusterName: hbang-proxmox
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: ProxmoxMachineTemplate
+        name: hbang-proxmox-worker-px1
+      version: v1.34.3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxMachineTemplate
+metadata:
+  name: hbang-proxmox-worker-lab01
+  namespace: default
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 100
+      format: raw
+      full: true
+      memoryMiB: 16384
+      network:
+        networkDevices:
+          - bridge: vmbr0
+            model: virtio
+      numCores: 4
+      numSockets: 1
+      sourceNode: lab01
+      templateID: 106
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: hbang-proxmox-worker-px2
+  namespace: default
+spec:
+  clusterName: hbang-proxmox
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          kind: KubeadmConfigTemplate
+          name: hbang-proxmox-worker
+      clusterName: hbang-proxmox
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: ProxmoxMachineTemplate
+        name: hbang-proxmox-worker-px2
+      version: v1.34.3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxMachineTemplate
+metadata:
+  name: hbang-proxmox-worker-lab02
+  namespace: default
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 100
+      format: raw
+      full: true
+      memoryMiB: 16384
+      network:
+        networkDevices:
+          - bridge: vmbr0
+            model: virtio
+      numCores: 4
+      numSockets: 1
+      sourceNode: lab02
+      templateID: 107
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: hbang-proxmox-worker-px3
+  namespace: default
+spec:
+  clusterName: hbang-proxmox
+  replicas: 2
+  selector:
+    matchLabels: null
+  template:
+    metadata:
+      labels:
+        node-role.kubernetes.io/node: ""
+    spec:
+      bootstrap:
+        configRef:
+          kind: KubeadmConfigTemplate
+          name: hbang-proxmox-worker
+      clusterName: hbang-proxmox
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: ProxmoxMachineTemplate
+        name: hbang-proxmox-worker-px3
+      version: v1.34.3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: ProxmoxMachineTemplate
+metadata:
+  name: hbang-proxmox-worker-lab03
+  namespace: default
+spec:
+  template:
+    spec:
+      disks:
+        bootVolume:
+          disk: scsi0
+          sizeGb: 100
+      format: raw
+      full: true
+      memoryMiB: 16384
+      network:
+        networkDevices:
+          - bridge: vmbr0
+            model: virtio
+      numCores: 4
+      numSockets: 1
+      sourceNode: lab03
+      templateID: 108
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: hbang-proxmox-worker
+  namespace: default
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            provider-id: proxmox://'{{ ds.meta_data.instance_id }}'
+      postKubeadmCommands:
+        - |
+          python3 -c "
+          import yaml
+          path = '/var/lib/kubelet/config.yaml'
+          cfg = yaml.safe_load(open(path))
+          cfg.setdefault('featureGates', {}).update({
+            'KubeletCrashLoopBackOffMax': True,
+          })
+          open(path, 'w').write(yaml.dump(cfg))
+          "
+        - systemctl restart kubelet
+      users:
+        - name: root
+          sshAuthorizedKeys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINq25Ui7pTHj6BA/hrxZYFpC+HQmJaubAsEXID6VA7JW ansible_key"

@@ -1,0 +1,20 @@
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "caas.fullname" . }}-web
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caas.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.web.service.type }}
+  selector:
+    {{- include "caas.selectorLabels" . | nindent 4 }}
+  ports:
+  - name: web
+    port: {{ .Values.web.service.port }}
+    targetPort: web
+    {{- if and (eq .Values.web.service.type "NodePort") .Values.web.service.nodePort }}
+    nodePort: {{ .Values.web.service.nodePort }}
+    {{- end }}
+{{- end }}

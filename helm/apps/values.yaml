@@ -177,6 +177,27 @@ apps:
       l2announcements:
         enabled: true
 
+  caas:
+    # Cluster-as-a-service operator (replaces management-helm). Chart vendored at
+    # helm/caas. NOTE: image caas:0.1.10 has no registry — it must be imported into
+    # k3s containerd on k3s0 (sudo k3s ctr images import). Secrets proxmox-credentials
+    # + unifi-credentials must exist in caas-system (ideally via external-secrets).
+    enabled: true
+    type: helm
+    repoURL: https://github.com/Hyunsuk-Bang/homelab.git
+    name: caas
+    path: helm/caas
+    targetRevision: master
+    namespace: caas-system
+    syncOptions:
+    - ServerSideApply=true
+    values:
+      proxmox:
+        existingSecret: proxmox-credentials
+      unifi:
+        enabled: true
+        existingSecret: unifi-credentials
+
   dex:
     enabled: false
     targetRevision: 0.23.0

@@ -14,8 +14,8 @@ spec:
         - {{ . }}
         {{- end }}
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: KubeadmControlPlane
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+    kind: KamajiControlPlane
     name: {{ printf "%s-control-plane" $cluster }}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1

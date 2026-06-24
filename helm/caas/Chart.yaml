@@ -1,0 +1,16 @@
+apiVersion: v2
+name: caas
+description: |
+  Self-service Kubernetes cluster-as-a-service operator + web UI. Runs Kamaji hosted
+  control planes on a management cluster with Proxmox VM workers, provisioned via Cluster API.
+type: application
+version: 0.1.0          # chart version
+appVersion: "0.1.10"    # operator image version
+home: https://github.com/hbang/caas
+sources:
+  - https://github.com/hbang/caas
+keywords:
+  - cluster-api
+  - kamaji
+  - proxmox
+  - caas

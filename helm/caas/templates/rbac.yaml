@@ -1,0 +1,52 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "caas.fullname" . }}-manager
+  labels:
+    {{- include "caas.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: [secrets]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [""]
+  resources: [namespaces]
+  verbs: [create, delete, get, list, watch]
+- apiGroups: [bootstrap.cluster.x-k8s.io]
+  resources: [kubeadmconfigtemplates]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters/finalizers]
+  verbs: [update]
+- apiGroups: [caas.hbang.io]
+  resources: [tenantclusters/status, vlanpools/status]
+  verbs: [get, patch, update]
+- apiGroups: [caas.hbang.io]
+  resources: [vlanpools]
+  verbs: [get, list, watch]
+- apiGroups: [cluster.x-k8s.io]
+  resources: [clusters, machinedeployments]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [controlplane.cluster.x-k8s.io]
+  resources: [kamajicontrolplanes]
+  verbs: [create, delete, get, list, patch, update, watch]
+- apiGroups: [infrastructure.cluster.x-k8s.io]
+  resources: [proxmoxclusters, proxmoxmachinetemplates]
+  verbs: [create, delete, get, list, patch, update, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "caas.fullname" . }}-manager
+  labels:
+    {{- include "caas.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "caas.fullname" . }}-manager
+subjects:
+- kind: ServiceAccount
+  name: {{ include "caas.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}

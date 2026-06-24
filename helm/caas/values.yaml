@@ -1,0 +1,59 @@
+# Default values for the caas operator.
+
+replicaCount: 1
+
+image:
+  repository: caas
+  tag: ""              # empty → .Chart.appVersion (0.1.5)
+  # No registry in the homelab: the image is imported into k3s containerd, so Never.
+  # Set to IfNotPresent/Always if you push the image to a registry.
+  pullPolicy: Never
+
+# Pin to the node where the image was imported (no registry). Empty {} to schedule anywhere.
+nodeSelector:
+  kubernetes.io/hostname: k3s0
+tolerations: []
+affinity: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Single replica: leader election off. Turn on if you run >1 replica.
+leaderElect: false
+
+serviceAccount:
+  create: true
+  name: ""             # defaults to the chart fullname
+
+# Embedded web UI.
+web:
+  enabled: true
+  namespace: default                       # namespace TenantClusters are created in
+  service:
+    type: NodePort
+    port: 8090
+    nodePort: 30090
+  nodeTemplates: "lab01=106,lab02=107,lab03=108"   # node=proxmoxTemplateID,...
+  kubernetesVersions: "v1.34.3"                     # comma-separated; each needs an image template
+
+# Proxmox API credentials. Either set values here (a Secret is created) or point
+# existingSecret at a Secret with keys url/tokenID/tokenSecret.
+proxmox:
+  existingSecret: ""
+  url: ""              # e.g. https://192.168.10.10:8006
+  tokenID: ""          # e.g. root@pam!CAPI
+  tokenSecret: ""
+
+# UniFi network provider (optional). If disabled or unconfigured, the operator uses the
+# noop provider (networks must be provisioned out-of-band). Either set values (a Secret is
+# created) or point existingSecret at a Secret with keys url/apiKey/site.
+unifi:
+  enabled: false
+  existingSecret: ""
+  url: ""              # e.g. https://192.168.20.1
+  apiKey: ""
+  site: default

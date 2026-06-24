@@ -1,0 +1,83 @@
+{{- $proxmoxSecret := .Values.proxmox.existingSecret | default (printf "%s-proxmox" (include "caas.fullname" .)) -}}
+{{- $unifiSecret := .Values.unifi.existingSecret | default (printf "%s-unifi" (include "caas.fullname" .)) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "caas.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caas.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "caas.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "caas.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "caas.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: manager
+        image: {{ include "caas.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - --leader-elect={{ .Values.leaderElect }}
+        - --metrics-bind-address=0
+        - --health-probe-bind-address=:8081
+        {{- if .Values.web.enabled }}
+        - --web-bind-address=:{{ .Values.web.service.port }}
+        - --web-namespace={{ .Values.web.namespace }}
+        - --web-node-templates={{ .Values.web.nodeTemplates }}
+        - --web-kubernetes-versions={{ .Values.web.kubernetesVersions }}
+        {{- else }}
+        - --web-bind-address=
+        {{- end }}
+        env:
+        - name: PROXMOX_URL
+          valueFrom: {secretKeyRef: {name: {{ $proxmoxSecret }}, key: url}}
+        - name: PROXMOX_TOKEN_ID
+          valueFrom: {secretKeyRef: {name: {{ $proxmoxSecret }}, key: tokenID}}
+        - name: PROXMOX_TOKEN_SECRET
+          valueFrom: {secretKeyRef: {name: {{ $proxmoxSecret }}, key: tokenSecret}}
+        {{- if .Values.unifi.enabled }}
+        - name: UNIFI_URL
+          valueFrom: {secretKeyRef: {name: {{ $unifiSecret }}, key: url}}
+        - name: UNIFI_API_KEY
+          valueFrom: {secretKeyRef: {name: {{ $unifiSecret }}, key: apiKey}}
+        - name: UNIFI_SITE
+          valueFrom: {secretKeyRef: {name: {{ $unifiSecret }}, key: site}}
+        {{- end }}
+        ports:
+        {{- if .Values.web.enabled }}
+        - {name: web, containerPort: {{ .Values.web.service.port }}}
+        {{- end }}
+        - {name: health, containerPort: 8081}
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8081}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: {path: /readyz, port: 8081}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {drop: [ALL]}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}

@@ -1,0 +1,22 @@
+caas is installed in namespace {{ .Release.Namespace }} (release {{ .Release.Name }}).
+
+Operator image: {{ include "caas.image" . }}
+Network provider: {{ if .Values.unifi.enabled }}unifi ({{ .Values.unifi.url | default "from existing secret" }}){{ else }}noop (provision VLAN networks out-of-band){{ end }}
+
+{{- if .Values.web.enabled }}
+
+Web UI: {{ .Values.web.service.type }} on port {{ .Values.web.service.port }}
+{{- if and (eq .Values.web.service.type "NodePort") .Values.web.service.nodePort }}
+  → http://<node-ip>:{{ .Values.web.service.nodePort }}/
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "caas.fullname" . }}-web {{ .Values.web.service.port }}:{{ .Values.web.service.port }}
+{{- end }}
+{{- end }}
+
+Next:
+  1. Create a VLANPool (allocatable VLANs + subnet derivation):
+       kubectl apply -f https://.../config/samples/caas_v1alpha1_vlanpool.yaml
+  2. Launch a TenantCluster from the web UI, or:
+       kubectl apply -f config/samples/caas_v1alpha1_tenantcluster.yaml
+
+Check status:  kubectl get tenantcluster -A
